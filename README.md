@@ -17,6 +17,33 @@ entirely by the incoming sound - no images, no pre-made animations. Audio passes
 | **LAYOUT** | STRIP (wide, 1000×220) · LARGE (920×640) - both resizable, each remembers its size |
 | **CLEAN** | hides every control for filming; double-click anywhere to toggle. A small "SMSW TOTEM" signature stays in the corner. |
 
+## Motion, sync and control (latest)
+
+- **SPEED** slider: 0.3x to 2.5x animation rate (default about 1.4x, livelier than before). It
+  changes how fast pieces move, how long they stay and how quickly the next one arrives. It never
+  touches the audio or Live's tempo.
+- **LOCK**: keeps the current piece on screen (still animating, still reacting, SPEED still works).
+  No new pieces appear until it is released.
+- **Musical sync**: one shared beat clock (Live's song position; when Live is stopped it runs at
+  the host tempo and re-aligns to detected kicks). Pieces change on bar lines, geometry turns in
+  eased steps on the beat (every half, one, two or four beats depending on SPEED), everything
+  pulses on kicks and swells with the bass, and breakdowns soften and slow the display.
+- **BEAT COLOUR**: a clear pulse on every beat (the accent colour bleeds into the line, stronger
+  on the downbeat), a hue drift through each bar and a new palette every 1, 2 or 4 bars. Applied to
+  the scope, spectrum and artwork.
+- **SCOPE + ART**: the artwork is a soft ghost everywhere and shines through brightly inside the
+  waveform's envelope (Classic), the ring (Orbit) or the kaleidoscope (Mirror).
+- **Composition**: a safe canvas inside the screen; major geometry is centred; other pieces sit
+  on the thirds, never off-canvas, never stretched. In Strip, Orbit and Mirror stay round.
+- **Strip layout**: responsive panel. Shallow windows switch to a two-column panel automatically.
+- **New**: 18 mandala / sacred-geometry pieces (rings, lotus, nine triangles, star polygons,
+  turning squares, rose curves, an eight-armed stave, triquetra, Borromean rings, a spectrum
+  mandala whose shape *is* the music, rings of sound, star tetrahedron, hexagon pulse ...) and the
+  **Night motorway** POV: lane markings every two beats, a lamp post every beat, kicks brighten
+  the road light, SPEED and bass set the pace. Library: 134 pieces.
+- The longship now rides the waveform sea in place, the capstone eye no longer floats and the
+  floating "many eyes" piece was removed.
+
 ## Artwork (DISPLAY: SCOPE+ART · ART · SCOPE)
 
 116 original artwork elements, drawn live in fine lines, silhouettes, soft glows and small pixel art,

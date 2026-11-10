@@ -15,6 +15,7 @@ const std::vector<Spec>& library()
         addSentimental (v);
         addSurreal (v);
         addGeometric (v);
+        addMandala (v);
         return v;
     }();
     return lib;
@@ -47,6 +48,26 @@ float ease (float t) noexcept
 {
     t = juce::jlimit (0.0f, 1.0f, t);
     return t * t * (3.0f - 2.0f * t);
+}
+
+float beatStep (float beats, float beatsPerStep) noexcept
+{
+    const float b = beats / juce::jmax (0.05f, beatsPerStep);
+    const float whole = std::floor (b);
+    const float fr = b - whole;
+    // most of the motion happens just after the beat, then it settles
+    return whole + ease (juce::jmin (1.0f, fr * 2.2f));
+}
+
+float spectrumAt (const Frame& f, float u) noexcept
+{
+    if (f.spectrum == nullptr || f.bands < 2)
+        return 0.0f;
+    const float pos = juce::jlimit (0.0f, (float) (f.bands - 1), u * (float) (f.bands - 1));
+    const int i0 = (int) pos;
+    const int i1 = juce::jmin (f.bands - 1, i0 + 1);
+    const float fr = pos - (float) i0;
+    return f.spectrum[i0] + (f.spectrum[i1] - f.spectrum[i0]) * fr;
 }
 
 juce::PathStrokeType pen (float width)

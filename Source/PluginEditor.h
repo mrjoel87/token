@@ -43,6 +43,9 @@ private:
     void layoutBox();
     void layoutClean();
     juce::Rectangle<float> visualArea() const;
+    juce::Rectangle<float> artCanvas() const;
+    void placeRow (juce::Rectangle<float> row, std::initializer_list<std::pair<juce::Component*, const char*>> items,
+                   std::initializer_list<float> weights, bool captionsAbove);
 
     // painting
     void paintScreen (juce::Graphics&, const look::Look&);
@@ -55,8 +58,9 @@ private:
     SegmentSelector visualSelector, colourSelector, themeSelector, layoutSelector;
     LedToggle cleanToggle;
     SegmentSelector displaySelector;
-    juce::Slider intensitySlider;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> intensityAttachment;
+    LedToggle lockToggle;
+    juce::Slider intensitySlider, speedSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> intensityAttachment, speedAttachment;
 
     std::atomic<float>* pMode = nullptr;
     std::atomic<float>* pVisual = nullptr;
@@ -65,6 +69,8 @@ private:
     std::atomic<float>* pIntensity = nullptr;
     std::atomic<float>* pClean = nullptr;
     std::atomic<float>* pArt = nullptr;
+    std::atomic<float>* pSpeed = nullptr;
+    std::atomic<float>* pLock = nullptr;
 
     DisplayMode mode = DisplayMode::Box;
     bool clean = false, applyingMode = false, hasFrame = false;

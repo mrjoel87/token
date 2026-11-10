@@ -1,4 +1,4 @@
-// =================================================================================================
+﻿// =================================================================================================
 //  SURREAL OBJECTS - dreamlike and occasionally unsettling
 //  (the number transmission and the sigils are invented - no hidden meaning)
 // =================================================================================================
@@ -328,17 +328,6 @@ void portal (G& g, const Frame& f)
     }
 }
 
-void manyEyes (G& g, const Frame& f)
-{
-    for (int i = 0; i < 9; ++i)
-    {
-        const float delay = K::hash (f.seed, i + 60) * 4.0f;
-        const float open = K::ease ((f.t - delay) * 0.8f) * (std::fmod (f.t + (float) i, 4.5f) < 0.15f ? 0.1f : 1.0f);
-        drawEye (g, f, f.P (0.1f + 0.8f * K::hash (f.seed, i), 0.15f + 0.7f * K::hash (f.seed, i + 30)),
-                 f.S() * (0.05f + 0.04f * K::hash (f.seed, i + 90)), open, std::sin (f.t * 0.7f + (float) i));
-    }
-}
-
 void numberStation (G& g, const Frame& f)
 {
     const auto& k = f.ink;
@@ -442,7 +431,6 @@ void addSurreal (std::vector<Spec>& v)
     v.push_back ({ "Hourglass",                Category::Surreal, hourglass,       Zone::Centre,   0.55f, 0.6f, 12.0f, 22.0f, { 0.8f, 0.3f, 0.6f, 0.1f }, sym });
     v.push_back ({ "Staircase into cloud",     Category::Surreal, cloudStair,      Zone::Centre,   0.75f, 0.8f, 14.0f, 24.0f, { 0.7f, 0.3f, 0.8f, 0.2f }, hero });
     v.push_back ({ "Portal",                   Category::Surreal, portal,          Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.1f, 0.9f, 0.3f, 1.0f }, sym });
-    v.push_back ({ "Many eyes",                Category::Surreal, manyEyes,        Zone::Full,     1.0f,  1.0f, 8.0f,  14.0f, { 0.2f, 0.8f, 0.2f, 0.8f }, sym | flagRare });
     v.push_back ({ "Number transmission",      Category::Surreal, numberStation,   Zone::Centre,   0.35f, 2.6f, 9.0f,  14.0f, { 0.3f, 0.5f, 0.3f, 0.7f }, sym | flagRare });
     v.push_back ({ "Face in the static",       Category::Surreal, staticFace,      Zone::Centre,   0.65f, 0.9f, 8.0f,  14.0f, { 0.5f, 0.9f, 0.3f, 0.4f }, sym | flagRare });
     v.push_back ({ "End of the corridor",      Category::Surreal, corridor,        Zone::Centre,   0.75f, 1.4f, 10.0f, 18.0f, { 0.5f, 0.8f, 0.4f, 0.3f }, sym });

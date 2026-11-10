@@ -14,6 +14,7 @@ struct VisualSettings
 {
     VisualMode mode = VisualMode::Classic;
     float intensity = 0.65f;
+    float speed = 1.0f;          // SPEED multiplier (rotation / evolution rate)
     bool strip = false;
 };
 
@@ -41,6 +42,10 @@ public:
     void drawSpectrum (juce::Graphics&, const AudioFeatures&, juce::Rectangle<float> area,
                        const look::Look&, const look::Palette&, bool prominent) const;
 
+    /** The region around the signal through which the artwork shines brightest (SCOPE + ART).
+        Empty for NONE (meaning: no mask). */
+    juce::Path revealRegion (float margin) const;
+
 private:
     void extractTriggered (const ScopeHistory&, float gain, float peak, double sampleRate,
                            int displayLen, std::vector<float>& out, int n);
@@ -61,7 +66,9 @@ private:
     float pulse = 0.0f, weight = 0.0f, split = 0.0f, detail = 0.0f, glow = 0.5f;
     float flow = 0.0f, calm = 0.0f, symmetry = 0.0f, rotation = 0.0f, radius = 0.0f;
 
-    std::vector<float> raw, disp, high, lpScratch;
+    std::vector<float> raw, disp, high, env, lpScratch;
+    float mirrorAmp = 1.0f;
+    mutable float pulseBoost = 0.0f;     // beat-colour pulse, set at the start of draw()
     std::vector<int> negScratch;
     std::vector<juce::Point<float>> phasePts;
 

@@ -26,7 +26,8 @@ enum Flags
     flagRare      = 1,    // appears far less often
     flagNoFlip    = 2,    // never mirrored (symbols, text-like glyphs)
     flagHero      = 4,    // may be the main element
-    flagCompanion = 8     // may accompany the main element (small, ambient)
+    flagCompanion = 8,    // may accompany the main element (small, ambient)
+    flagSpin      = 16    // radially symmetric: the engine turns it in steps locked to the beat
 };
 
 /** Colours an element is painted with (derived from theme + palette). */
@@ -51,6 +52,12 @@ struct Frame
     float px = 2.0f;          // pixel-art unit
     float bass = 0.0f, mid = 0.0f, high = 0.0f, kick = 0.0f, hat = 0.0f;
     float energy = 0.0f, flow = 0.0f, drop = 0.0f, beat = 0.0f;
+    float beats = 0.0f;       // continuous beat count (host song position, or the onset-aligned clock)
+    float bar = 0.0f;         // 0..1 within the bar
+    float travel = 0.0f;      // forward motion in beats, scaled by SPEED and lifted by the bass
+    float speed = 1.0f;       // SPEED multiplier
+    const float* spectrum = nullptr;   // log-spaced spectrum, 0..1 per band
+    int bands = 0;
     juce::uint32 seed = 1;
     bool flip = false;
     Ink ink;
@@ -91,6 +98,7 @@ void addCelestial   (std::vector<Spec>&);
 void addSentimental (std::vector<Spec>&);
 void addSurreal     (std::vector<Spec>&);
 void addGeometric   (std::vector<Spec>&);
+void addMandala     (std::vector<Spec>&);
 
 const std::vector<Spec>& library();
 
@@ -104,6 +112,8 @@ namespace kit
     float hash (juce::uint32 seed, int i) noexcept;          // 0..1, deterministic
     float noise (juce::uint32 seed, float x) noexcept;       // smooth 0..1
     float ease (float t) noexcept;                           // smoothstep, clamped
+    float beatStep (float beats, float beatsPerStep) noexcept; // whole steps + an eased glide on each beat
+    float spectrumAt (const Frame&, float u) noexcept;       // 0..1, u = 0 (bass) .. 1 (treble)
 
     juce::PathStrokeType pen (float width);
     void halo (juce::Graphics&, juce::Point<float> centre, float radius, juce::Colour centreColour);

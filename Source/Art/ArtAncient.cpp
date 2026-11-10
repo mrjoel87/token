@@ -1,4 +1,4 @@
-// =================================================================================================
+﻿// =================================================================================================
 //  ANCIENT & MYSTERIOUS
 //  Historical symbols follow their documented forms (Elder Futhark, Ogham, the Wedjat eye, ankh,
 //  alchemical signs, the classical labyrinth, valknut, triple spiral). All drawings are original.
@@ -77,8 +77,8 @@ void longship (G& g, const Frame& f)
 
     const float shipW = f.H() * 1.5f, shipH = f.H() * 0.72f;
     const float dir = f.flip ? -1.0f : 1.0f;
-    const float travel = (f.W() + shipW * 2.0f) * f.life;
-    const float cx = f.flip ? f.box.getRight() + shipW - travel : f.box.getX() - shipW + travel;
+    // the ship rides the waveform sea in place (it no longer flies across the screen)
+    const float cx = f.X (0.5f) + std::sin (f.t * 0.15f) * juce::jmin (f.W() * 0.08f, shipW * 0.3f);
     const float wl = f.Y (seaV) + std::sin (f.t * 1.3f) * f.H() * 0.02f;
     auto P = [&] (float u, float v) { return Pt (cx + dir * u * shipW, wl + v * shipH); };
 
@@ -227,7 +227,7 @@ void pyramidEye (G& g, const Frame& f)
         g.drawLine (f.X (0.5f - half), f.Y (v), f.X (0.5f + half), f.Y (v), 0.6f);
     }
 
-    const float lift = std::sin (f.t * 0.8f) * f.H() * 0.01f - f.H() * 0.05f * K::ease (f.life * 3.0f);
+    const float lift = 0.0f;   // the capstone stays seated on the pyramid
     juce::Path cap;
     cap.addTriangle (f.X (0.4f), f.Y (0.26f) + lift, f.X (0.6f), f.Y (0.26f) + lift, f.X (0.5f), f.Y (0.08f) + lift);
     K::halo (g, { f.X (0.5f), f.Y (0.19f) + lift }, f.S() * 0.18f, k.accent.withAlpha (0.25f + 0.3f * f.bass));
@@ -774,7 +774,7 @@ void addAncient (std::vector<Spec>& v)
     //            name                    category            fn               zone            size  aspect  life           quiet bass  melod energ   flags
     v.push_back ({ "Viking longship",      Category::Ancient, longship,        Zone::BandMid,  0.42f, 1.0f, 16.0f, 24.0f, { 0.3f, 0.9f, 0.6f, 0.5f }, hero });
     v.push_back ({ "Runestone",            Category::Ancient, runestone,       Zone::Ground,   0.62f, 0.55f, 12.0f, 22.0f, { 0.5f, 0.9f, 0.3f, 0.3f }, symbol });
-    v.push_back ({ "Circle of runes",      Category::Ancient, runeCircle,      Zone::Centre,   0.78f, 1.0f, 12.0f, 20.0f, { 0.3f, 0.7f, 0.4f, 0.8f }, symbol });
+    v.push_back ({ "Circle of runes",      Category::Ancient, runeCircle,      Zone::Centre,   0.78f, 1.0f, 12.0f, 20.0f, { 0.3f, 0.7f, 0.4f, 0.8f }, symbol | flagSpin });
     v.push_back ({ "The great rune",       Category::Ancient, greatRune,       Zone::Centre,   0.6f,  0.7f, 9.0f,  16.0f, { 0.7f, 0.8f, 0.3f, 0.2f }, symbol });
     v.push_back ({ "Pyramid and eye",      Category::Ancient, pyramidEye,      Zone::Centre,   0.72f, 1.3f, 12.0f, 20.0f, { 0.3f, 0.7f, 0.3f, 0.9f }, hero });
     v.push_back ({ "Three pyramids",       Category::Ancient, pyramids,        Zone::Ground,   0.5f,  2.4f, 14.0f, 24.0f, { 0.6f, 0.5f, 0.4f, 0.3f }, hero });
@@ -786,16 +786,16 @@ void addAncient (std::vector<Spec>& v)
     v.push_back ({ "Ruined arch",          Category::Ancient, ruinedArch,      Zone::Ground,   0.62f, 1.2f, 12.0f, 22.0f, { 0.7f, 0.4f, 0.6f, 0.2f }, hero });
     v.push_back ({ "Broken columns",       Category::Ancient, brokenColumns,   Zone::Ground,   0.5f,  2.0f, 12.0f, 22.0f, { 0.6f, 0.5f, 0.4f, 0.3f }, hero });
     v.push_back ({ "Door in the desert",   Category::Ancient, desertDoor,      Zone::Ground,   0.6f,  1.3f, 12.0f, 20.0f, { 0.8f, 0.3f, 0.6f, 0.1f }, hero });
-    v.push_back ({ "The four elements",    Category::Ancient, elementsSigns,   Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.4f, 0.6f, 0.4f, 0.7f }, symbol });
-    v.push_back ({ "The squared circle",   Category::Ancient, squaredCircle,   Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.5f, 0.6f, 0.4f, 0.5f }, symbol });
-    v.push_back ({ "The seven metals",     Category::Ancient, planetaryMetals, Zone::Centre,   0.7f,  1.0f, 10.0f, 18.0f, { 0.4f, 0.5f, 0.5f, 0.6f }, symbol });
+    v.push_back ({ "The four elements",    Category::Ancient, elementsSigns,   Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.4f, 0.6f, 0.4f, 0.7f }, symbol | flagSpin });
+    v.push_back ({ "The squared circle",   Category::Ancient, squaredCircle,   Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.5f, 0.6f, 0.4f, 0.5f }, symbol | flagSpin });
+    v.push_back ({ "The seven metals",     Category::Ancient, planetaryMetals, Zone::Centre,   0.7f,  1.0f, 10.0f, 18.0f, { 0.4f, 0.5f, 0.5f, 0.6f }, symbol | flagSpin });
     v.push_back ({ "Ogham inscription",    Category::Ancient, ogham,           Zone::Centre,   0.75f, 0.35f, 10.0f, 16.0f, { 0.7f, 0.4f, 0.5f, 0.2f }, symbol });
     v.push_back ({ "Wedjat eye",           Category::Ancient, wedjat,          Zone::Centre,   0.36f, 1.6f, 9.0f,  16.0f, { 0.4f, 0.8f, 0.3f, 0.6f }, symbol });
     v.push_back ({ "Ankh",                 Category::Ancient, ankh,            Zone::Centre,   0.5f,  0.62f, 8.0f, 14.0f, { 0.6f, 0.6f, 0.4f, 0.3f }, symbol });
     v.push_back ({ "Scarab and sun",       Category::Ancient, scarab,          Zone::Centre,   0.5f,  1.0f, 9.0f,  16.0f, { 0.5f, 0.6f, 0.4f, 0.4f }, symbol });
-    v.push_back ({ "Ouroboros",            Category::Ancient, ouroboros,       Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.5f, 0.7f, 0.5f, 0.5f }, symbol });
-    v.push_back ({ "Valknut",              Category::Ancient, valknut,         Zone::Centre,   0.5f,  1.0f, 9.0f,  16.0f, { 0.3f, 0.8f, 0.3f, 0.7f }, symbol });
-    v.push_back ({ "Triple spiral",        Category::Ancient, triskele,        Zone::Centre,   0.5f,  1.0f, 9.0f,  16.0f, { 0.6f, 0.5f, 0.6f, 0.4f }, symbol });
-    v.push_back ({ "Labyrinth",            Category::Ancient, labyrinth,       Zone::Centre,   0.7f,  1.0f, 12.0f, 22.0f, { 0.7f, 0.4f, 0.6f, 0.3f }, symbol });
+    v.push_back ({ "Ouroboros",            Category::Ancient, ouroboros,       Zone::Centre,   0.62f, 1.0f, 10.0f, 18.0f, { 0.5f, 0.7f, 0.5f, 0.5f }, symbol | flagSpin });
+    v.push_back ({ "Valknut",              Category::Ancient, valknut,         Zone::Centre,   0.5f,  1.0f, 9.0f,  16.0f, { 0.3f, 0.8f, 0.3f, 0.7f }, symbol | flagSpin });
+    v.push_back ({ "Triple spiral",        Category::Ancient, triskele,        Zone::Centre,   0.5f,  1.0f, 9.0f,  16.0f, { 0.6f, 0.5f, 0.6f, 0.4f }, symbol | flagSpin });
+    v.push_back ({ "Labyrinth",            Category::Ancient, labyrinth,       Zone::Centre,   0.7f,  1.0f, 12.0f, 22.0f, { 0.7f, 0.4f, 0.6f, 0.3f }, symbol | flagSpin });
 }
 }

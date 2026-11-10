@@ -1,4 +1,4 @@
-#include "Visualiser.h"
+﻿#include "Visualiser.h"
 #include "Util.h"
 #include <cmath>
 
@@ -106,7 +106,7 @@ void Visualiser::update (const ScopeHistory& h, const AudioFeatures& f, const Vi
     flow     = smoothTo (flow, f.sustain * (1.0f - juce::jlimit (0.0f, 1.0f, f.onsetRate / 4.0f)), dt, 1.0f);
     calm     = smoothTo (calm, juce::jlimit (0.0f, 1.0f, f.stateWeights[0] * 0.7f + f.breakdown), dt, 1.0f);
     symmetry = smoothTo (symmetry, juce::jlimit (0.0f, 1.0f, f.intensity * k * 1.3f + f.drop * 0.6f - 0.45f), dt, 0.8f, 1.5f);
-    rotation += dt * (0.04f + 0.35f * f.mid * k + 0.15f * flow);
+    rotation += dt * s.speed * (0.04f + 0.35f * f.mid * k + 0.15f * flow);
 
     for (size_t i = 0; i < peaks.size(); ++i)
         peaks[i] = juce::jmax (f.spectrum[i], peaks[i] - dt * 0.35f);
@@ -172,6 +172,17 @@ void Visualiser::update (const ScopeHistory& h, const AudioFeatures& f, const Vi
                 else        detailPath.lineTo (a.getX() + (float) c * dx, y);
             }
 
+        // the signal's local envelope (for revealing the artwork through the waveform)
+        if (env.size() != (size_t) cols)
+            env.assign ((size_t) cols, 0.0f);
+        for (int c = 0; c < cols; ++c)
+        {
+            float m = 0.0f;
+            for (int j = juce::jmax (0, c - 4); j <= juce::jmin (cols - 1, c + 4); ++j)
+                m = juce::jmax (m, std::abs (disp[(size_t) j]));
+            env[(size_t) c] = smoothTo (env[(size_t) c], m, dt, 0.04f, 0.4f);
+        }
+
         pushTrail (current);
     }
     else if (mode == VisualMode::Orbit)
@@ -187,7 +198,7 @@ void Visualiser::update (const ScopeHistory& h, const AudioFeatures& f, const Vi
         radius = smoothTo (radius, base * (1.0f + 0.10f * pulse + 0.07f * weight * k - 0.05f * calm), dt, 0.03f, 0.25f);
         orbitR = radius;
         orbitAmp = base * (0.30f + 0.25f * k) * (1.0f - 0.3f * calm);
-        const float xScale = strip ? 1.8f : 1.0f;
+        const float xScale = 1.0f;   // never stretch: circles stay circles in the wide strip
 
         for (int i = 0; i < n; ++i)
         {
@@ -227,7 +238,8 @@ void Visualiser::update (const ScopeHistory& h, const AudioFeatures& f, const Vi
         settle();
 
         const float amp = juce::jmin (a.getWidth(), a.getHeight()) * (strip ? 0.46f : 0.40f) * (1.0f + 0.08f * pulse);
-        const float xScale = strip ? 1.8f : 1.0f;
+        mirrorAmp = amp;
+        const float xScale = 1.0f;   // never stretch: circles stay circles in the wide strip
         constexpr float r2 = 0.70710678f;
 
         // phase-space portrait, rotated 45 degrees (centred on the origin; placed when drawing)
@@ -242,6 +254,45 @@ void Visualiser::update (const ScopeHistory& h, const AudioFeatures& f, const Vi
     }
 }
 
+juce::Path Visualiser::revealRegion (float margin) const
+{
+    juce::Path p;
+
+    if (mode == VisualMode::Classic && env.size() >= 2)
+    {
+        const int cols = (int) env.size();
+        const float cy = area.getCentreY();
+        const float dx = area.getWidth() / (float) (cols - 1);
+        for (int c = 0; c < cols; ++c)
+        {
+            const float y = cy - env[(size_t) c] * halfHeight - margin;
+            if (c == 0) p.startNewSubPath (area.getX(), y); else p.lineTo (area.getX() + (float) c * dx, y);
+        }
+        for (int c = cols - 1; c >= 0; --c)
+            p.lineTo (area.getX() + (float) c * dx, cy + env[(size_t) c] * halfHeight + margin);
+        p.closeSubPath();
+        return p.createPathWithRoundedCorners (margin);
+    }
+
+    if (mode == VisualMode::Orbit)
+    {
+        const float outer = orbitR + orbitAmp + margin, inner = juce::jmax (0.0f, orbitR - orbitAmp - margin);
+        p.addEllipse (centre.x - outer, centre.y - outer, outer * 2.0f, outer * 2.0f);
+        p.addEllipse (centre.x - inner, centre.y - inner, inner * 2.0f, inner * 2.0f);
+        p.setUsingNonZeroWinding (false);
+        return p;
+    }
+
+    if (mode == VisualMode::Mirror)
+    {
+        const float r = mirrorAmp * 1.05f + margin;
+        p.addEllipse (centre.x - r, centre.y - r, r * 2.0f, r * 2.0f);
+        return p;
+    }
+
+    return p;   // NONE: no mask
+}
+
 // =================================================================================================
 //  Drawing
 // =================================================================================================
@@ -249,6 +300,8 @@ void Visualiser::strokeLuminous (juce::Graphics& g, const juce::Path& p, juce::C
                                  float width, float glowAmount, bool lightTheme) const
 {
     const float gs = lightTheme ? 0.5f : 1.0f;
+    glowAmount *= 1.0f + 0.9f * pulseBoost;
+    width *= 1.0f + 0.3f * pulseBoost;
     g.setColour (halo.withAlpha (juce::jlimit (0.0f, 1.0f, 0.05f * glowAmount * gs)));
     g.strokePath (p, stroke (width * 8.0f));
     g.setColour (halo.withAlpha (juce::jlimit (0.0f, 1.0f, 0.14f * glowAmount * gs)));
@@ -259,6 +312,9 @@ void Visualiser::strokeLuminous (juce::Graphics& g, const juce::Path& p, juce::C
 
 void Visualiser::draw (juce::Graphics& g, const look::Look& lk, const look::Palette& pal, float beatPulse) const
 {
+    // BEAT COLOUR: the line's glow swells on each beat
+    pulseBoost = beatPulse;
+
     switch (mode)
     {
         case VisualMode::Classic: drawClassic (g, lk, pal, beatPulse); break;
@@ -330,7 +386,7 @@ void Visualiser::drawOrbit (juce::Graphics& g, const look::Look& lk, const look:
     const bool light = lk.light;
     const float w = (strip ? 1.1f : 1.35f) * (0.75f + 1.0f * weight * k) * (1.0f - 0.3f * calm);
     const auto core = light ? pal.a : pal.a.interpolatedWith (juce::Colours::white, 0.12f + 0.2f * pulse);
-    const float xScale = strip ? 1.8f : 1.0f;
+    const float xScale = 1.0f;   // never stretch: circles stay circles in the wide strip
 
     // breathing core light
     {

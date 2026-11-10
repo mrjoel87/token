@@ -63,6 +63,7 @@ target_sources(TOKEN PRIVATE
     Source/Art/ArtSentimental.cpp
     Source/Art/ArtSurreal.cpp
     Source/Art/ArtGeometric.cpp
+    Source/Art/ArtMandala.cpp
     Source/Art/ArtEngine.cpp)
 
 target_include_directories(TOKEN PRIVATE Source)
