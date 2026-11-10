@@ -17,6 +17,36 @@ entirely by the incoming sound - no images, no pre-made animations. Audio passes
 | **LAYOUT** | STRIP (wide, 1000×220) · LARGE (920×640) - both resizable, each remembers its size |
 | **CLEAN** | hides every control for filming; double-click anywhere to toggle. A small "SMSW TOTEM" signature stays in the corner. |
 
+## Artwork (DISPLAY: SCOPE+ART · ART · SCOPE)
+
+116 original artwork elements, drawn live in fine lines, silhouettes, soft glows and small pixel art,
+coloured by the theme and palette (`Source/Art/`):
+
+| Category | Count | Examples |
+|---|---|---|
+| Ancient & mysterious | 25 | Viking longship on a waveform sea, runestone, rune circle, pyramid and eye, torii, pagoda, ruins, Wedjat eye, ankh, scarab, ouroboros, valknut, triple spiral, labyrinth, alchemical signs |
+| Nature & weather | 21 | whale, koi, jellyfish, birds, geese, ravens, rain cloud, storm, cirrus, snowy peaks, fog, pines, moon on the sea, cherry blossom, bamboo, fireflies, aurora, lotus, lone tree |
+| Celestial | 18 | moons and phases, ringed planet, orrery, eclipse, comet, meteors, Orion / Plough / Cassiopeia / Northern Cross, galaxy, nebula, astrolabe, star chart, black hole |
+| Sentimental | 19 | two on a bench, umbrella, little aeroplane, kite, beach walk, lighthouse, one lit window, night train, station, stargazer, rooftop cat, rain on a window, lantern boat, swing, telescope, a secret musician |
+| Surreal | 17 | floating island, door in the sea, eye in the geometry, sky lanterns, endless stairs, moon on a string, hand from the sea, hourglass, portal, many eyes, number transmission, face in the static |
+| Geometric | 16 | seed / flower of life, Metatron's cube, vesica, hexagram, icosahedron, torus, Lissajous, spirograph, golden spiral, ripples, tesseract, sunflower spiral, impossible triangle, standing waves |
+
+Three pairs of elements share a drawing routine but are different pictures: the four constellations
+(different star patterns) and the three sacred-geometry circle figures.
+
+**Scheduler.** A shuffle bag guarantees every element appears once before any can return, and the
+last 14 shown never start a new cycle. From the front of the bag, candidates are scored against a
+slow musical profile (quiet / bass / melodic / energetic), so quiet passages bring sentimental
+scenes and landscapes, bass-heavy passages bring weighty symbols, energetic passages bring geometry
+and drama. At most one main element plus one or two small companions (birds, planes, comets,
+constellations, lanterns) are shown at once. Durations range from ~8 s to ~30 s, with breathing room
+between pieces (longer in breakdowns). Drops end the current piece early and bring in something
+more dramatic. Placement, scale, mirroring, drift and entrance (fade, wipe, iris, rise) vary each time.
+
+**DISPLAY.** SCOPE+ART draws the artwork behind the oscilloscope; ART hides the scope and the
+spectrum completely (fading out smoothly) and gives the artwork the whole screen; SCOPE turns the
+artwork off.
+
 ## Visual modes
 
 - **Classic** - zero-crossing triggered horizontal oscilloscope with layered trails.

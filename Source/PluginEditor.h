@@ -6,6 +6,7 @@
 #include "AudioAnalyser.h"
 #include "ColourEngine.h"
 #include "Visualiser.h"
+#include "Art/ArtEngine.h"
 #include "Theme.h"
 #include "Transport.h"
 #include "UI/TotemLookAndFeel.h"
@@ -53,6 +54,7 @@ private:
 
     SegmentSelector visualSelector, colourSelector, themeSelector, layoutSelector;
     LedToggle cleanToggle;
+    SegmentSelector displaySelector;
     juce::Slider intensitySlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> intensityAttachment;
 
@@ -62,6 +64,7 @@ private:
     std::atomic<float>* pColour = nullptr;
     std::atomic<float>* pIntensity = nullptr;
     std::atomic<float>* pClean = nullptr;
+    std::atomic<float>* pArt = nullptr;
 
     DisplayMode mode = DisplayMode::Box;
     bool clean = false, applyingMode = false, hasFrame = false;
@@ -74,6 +77,10 @@ private:
     AudioAnalyser analyser;
     Visualiser visualiser;
     ColourEngine colours;
+    art::ArtEngine artEngine;
+    art::ArtContext artContext;
+    ArtMode artMode = ArtMode::ScopeAndArt;
+    float scopeFade = 1.0f;
     VisualSettings visualSettings;
     Transport transport;
     float time = 0.0f;

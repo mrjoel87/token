@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "Util.h"
 #include <cmath>
 
 namespace token
@@ -42,8 +43,10 @@ TokenEditor::TokenEditor (TokenAudioProcessor& p)
       colourSelector (*p.apvts.getParameter (ids::colour), { "MANUAL", "BEAT COLOUR" }),
       themeSelector  (*p.apvts.getParameter (ids::theme),  { "DARK", "LIGHT" }),
       layoutSelector (*p.apvts.getParameter (ids::mode),   { "STRIP", "LARGE" }),
-      cleanToggle    (*p.apvts.getParameter (ids::clean),  "CLEAN")
+      cleanToggle    (*p.apvts.getParameter (ids::clean),  "CLEAN"),
+      displaySelector (*p.apvts.getParameter (ids::artMode), { "SCOPE+ART", "ART", "SCOPE" })
 {
+    pArt       = p.apvts.getRawParameterValue (ids::artMode);
     pMode      = p.apvts.getRawParameterValue (ids::mode);
     pVisual    = p.apvts.getRawParameterValue (ids::visual);
     pTheme     = p.apvts.getRawParameterValue (ids::theme);
@@ -62,7 +65,7 @@ TokenEditor::TokenEditor (TokenAudioProcessor& p)
     intensitySlider.setDoubleClickReturnValue (true, defaults::intensity);
 
     for (auto* c : std::initializer_list<juce::Component*> { &visualSelector, &colourSelector, &themeSelector,
-                                                             &layoutSelector, &cleanToggle, &intensitySlider })
+                                                             &layoutSelector, &cleanToggle, &intensitySlider, &displaySelector })
         addAndMakeVisible (c);
 
     pullLeft.resize ((size_t) ScopeFifo::capacity);
@@ -117,7 +120,7 @@ void TokenEditor::applyMode (DisplayMode newMode, bool force)
 void TokenEditor::updateVisibility()
 {
     for (auto* c : std::initializer_list<juce::Component*> { &visualSelector, &colourSelector, &themeSelector,
-                                                             &layoutSelector, &intensitySlider })
+                                                             &layoutSelector, &intensitySlider, &displaySelector })
         c->setVisible (! clean);
 
     cleanToggle.setVisible (true);
@@ -153,6 +156,7 @@ void TokenEditor::layoutBox()
 
     struct Slot { juce::Component* comp; const char* caption; float weight; };
     const Slot slots[] = {
+        { &displaySelector, "DISPLAY",   3.4f },
         { &visualSelector,  "VISUAL",    4.3f },
         { &colourSelector,  "COLOUR",    2.6f },
         { &themeSelector,   "THEME",     1.9f },
@@ -192,10 +196,11 @@ void TokenEditor::layoutStrip()
     brandRect = inner.removeFromTop (juce::jmin (28.0f, inner.getHeight() * 0.2f));
     inner.removeFromTop (4.0f);
 
-    const float gap = 6.0f;
-    const float rowH = juce::jlimit (16.0f, 24.0f, (inner.getHeight() - gap * 3.0f) / 4.0f);
+    const float gap = 5.0f;
+    const float rowH = juce::jlimit (14.0f, 22.0f, (inner.getHeight() - gap * 4.0f) / 5.0f);
     auto row = [&] { auto r = inner.removeFromTop (rowH); inner.removeFromTop (gap); return r; };
 
+    displaySelector.setBounds (row().toNearestInt());
     visualSelector.setBounds (row().toNearestInt());
 
     auto r2 = row();
@@ -293,6 +298,23 @@ void TokenEditor::frame()
     visualSettings.strip = mode == DisplayMode::Strip;
     visualiser.update (history, f, visualSettings, visualArea(), sr, dt, time);
 
+    // artwork: SCOPE + ART / ART ONLY / SCOPE ONLY (the scope fades rather than snapping away)
+    artMode = (ArtMode) juce::jlimit (0, 2, juce::roundToInt (pArt->load()));
+    scopeFade = smoothTo (scopeFade, artMode == ArtMode::ArtOnly ? 0.0f : 1.0f, dt, 0.35f);
+
+    artContext.area = screenRect.reduced (screenRect.getWidth() * 0.02f, screenRect.getHeight() * 0.06f);
+    artContext.time = time;
+    artContext.dt = dt;
+    artContext.enabled = artMode != ArtMode::ScopeOnly;
+    artContext.artOnly = artMode == ArtMode::ArtOnly;
+    artContext.strip = mode == DisplayMode::Strip;
+    artContext.intensity = visualSettings.intensity;
+    artContext.beatPhase = colours.beatPhase();
+    artContext.audio = &f;
+    artContext.palette = colours.palette();
+    artContext.theme = light ? &look::light() : &look::dark();
+    artEngine.update (artContext);
+
     hasFrame = true;
     repaint();
 }
@@ -354,29 +376,48 @@ void TokenEditor::paintScreen (juce::Graphics& g, const look::Look& lk)
     const auto& f = analyser.features();
     const auto va = visualArea();
 
+    // everything that belongs to the scope fades together (ART ONLY hides it completely)
+    const bool scopeVisible = scopeFade > 0.01f;
+    const bool fadingScope = scopeVisible && scopeFade < 0.99f;
+
     // hairline graticule
-    g.setColour (lk.grid);
-    if (visualSettings.mode == VisualMode::Orbit || visualSettings.mode == VisualMode::Mirror)
+    if (scopeVisible)
     {
-        g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
-        g.fillRect (va.getCentreX(), s.getY(), 1.0f, s.getHeight());
-    }
-    else
-    {
-        g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
-        for (int i = 1; i < 10; ++i)
-            g.fillRect (va.getX() + va.getWidth() * (float) i / 10.0f, s.getY(), 1.0f, s.getHeight());
+        g.setColour (lk.grid.withMultipliedAlpha (scopeFade));
+        if (visualSettings.mode == VisualMode::Orbit || visualSettings.mode == VisualMode::Mirror)
+        {
+            g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
+            g.fillRect (va.getCentreX(), s.getY(), 1.0f, s.getHeight());
+        }
+        else
+        {
+            g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
+            for (int i = 1; i < 10; ++i)
+                g.fillRect (va.getX() + va.getWidth() * (float) i / 10.0f, s.getY(), 1.0f, s.getHeight());
+        }
     }
 
-    // spectrum: the whole stage when the oscilloscope is hidden, otherwise a quiet floor
-    if (visualSettings.mode == VisualMode::None)
-        visualiser.drawSpectrum (g, f, s.reduced (s.getWidth() * 0.04f, s.getHeight() * 0.14f), lk, pal, true);
-    else
-        visualiser.drawSpectrum (g, f, mode == DisplayMode::Strip ? s.reduced (4.0f, 0.0f)
-                                                                  : s.withTop (s.getBottom() - s.getHeight() * 0.22f).reduced (8.0f, 0.0f),
-                                 lk, pal, false);
+    // the artwork lives behind the signal
+    artEngine.draw (g, artContext);
 
-    visualiser.draw (g, lk, pal, colours.pulse());
+    if (scopeVisible)
+    {
+        if (fadingScope)
+            g.beginTransparencyLayer (scopeFade);
+
+        // spectrum: the whole stage when the oscilloscope is hidden, otherwise a quiet floor
+        if (visualSettings.mode == VisualMode::None)
+            visualiser.drawSpectrum (g, f, s.reduced (s.getWidth() * 0.04f, s.getHeight() * 0.14f), lk, pal, true);
+        else
+            visualiser.drawSpectrum (g, f, mode == DisplayMode::Strip ? s.reduced (4.0f, 0.0f)
+                                                                      : s.withTop (s.getBottom() - s.getHeight() * 0.22f).reduced (8.0f, 0.0f),
+                                     lk, pal, false);
+
+        visualiser.draw (g, lk, pal, colours.pulse());
+
+        if (fadingScope)
+            g.endTransparencyLayer();
+    }
 
     // finishing: fine grain, soft vignette (dark), glass hairline
     g.setTiledImageFill (grainTexture, fxRandom.nextInt (256), fxRandom.nextInt (256), lk.light ? 0.025f : 0.035f);
@@ -419,7 +460,9 @@ void TokenEditor::paintInfo (juce::Graphics& g, const look::Look& lk)
     auto r = s.removeFromTop (12.0f);
     g.setFont (ui::font (8.5f, "SemiBold", 0.3f));
     g.setColour (lk.textDim.withAlpha (0.8f));
-    g.drawText (visualName (visualSettings.mode), r, juce::Justification::centredLeft, false);
+    const juce::String modeText = artMode == ArtMode::ArtOnly ? juce::String ("ART")
+                                : juce::String (visualName (visualSettings.mode)) + (artMode == ArtMode::ScopeAndArt ? "  +  ART" : "");
+    g.drawText (modeText, r, juce::Justification::centredLeft, false);
 
     if (isOn (pColour))
     {

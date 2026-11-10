@@ -14,12 +14,14 @@ namespace token
         inline constexpr const char* visual    = "visual";     // Classic / Orbit / Mirror / None
         inline constexpr const char* colour    = "colour";     // Manual / Beat Colour
         inline constexpr const char* intensity = "intensity";  // strength of the visual reactions
+        inline constexpr const char* artMode   = "artmode";    // Scope + Art / Art Only / Scope Only
     }
 
     enum class DisplayMode { Strip = 0, Box = 1 };
     enum class VisualMode  { Classic = 0, Orbit, Mirror, None };
     enum class ThemeId     { Dark = 0, Light = 1 };
     enum class ColourMode  { Manual = 0, Beat = 1 };
+    enum class ArtMode     { ScopeAndArt = 0, ArtOnly = 1, ScopeOnly = 2 };
 
     namespace defaults
     {
@@ -45,6 +47,8 @@ namespace token
         layout.add (std::make_unique<AudioParameterFloat> (ParameterID { ids::intensity, 1 }, "Intensity",
                                                            NormalisableRange<float> (0.0f, 1.0f), defaults::intensity));
         layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::clean, 1 }, "Clean View", false));
+        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::artMode, 1 }, "Display",
+                                                            StringArray { "Scope + Art", "Art Only", "Scope Only" }, 0));
 
         return layout;
     }

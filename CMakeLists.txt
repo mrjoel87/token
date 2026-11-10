@@ -55,7 +55,15 @@ target_sources(TOKEN PRIVATE
     Source/ColourEngine.cpp
     Source/Visualiser.cpp
     Source/UI/TotemLookAndFeel.cpp
-    Source/UI/Controls.cpp)
+    Source/UI/Controls.cpp
+    Source/Art/ArtKit.cpp
+    Source/Art/ArtAncient.cpp
+    Source/Art/ArtNature.cpp
+    Source/Art/ArtCelestial.cpp
+    Source/Art/ArtSentimental.cpp
+    Source/Art/ArtSurreal.cpp
+    Source/Art/ArtGeometric.cpp
+    Source/Art/ArtEngine.cpp)
 
 target_include_directories(TOKEN PRIVATE Source)
 
