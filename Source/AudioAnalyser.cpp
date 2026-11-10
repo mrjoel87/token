@@ -170,14 +170,14 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
     f.high = smoothTo (f.high, hasData ? level01 (highE, -60.0f, -14.0f) : 0.0f, dt, 0.02f, 0.20f);
 
     // adaptive sensitivity: compare each band with its own recent peak
-    auto relative = [dt] (float level, float& env)
+    auto relativeLevel = [dt] (float level, float& env)
     {
         env = juce::jmax (level, env * std::exp (-dt / 6.0f), 0.18f);
         return juce::jlimit (0.0f, 1.0f, level / env);
     };
-    f.bassRel = smoothTo (f.bassRel, relative (f.bass, bassEnv), dt, 0.02f, 0.15f);
-    f.midRel  = smoothTo (f.midRel,  relative (f.mid,  midEnv),  dt, 0.03f, 0.20f);
-    f.highRel = smoothTo (f.highRel, relative (f.high, highEnv), dt, 0.02f, 0.15f);
+    f.bassRel = smoothTo (f.bassRel, relativeLevel (f.bass, bassEnv), dt, 0.02f, 0.15f);
+    f.midRel  = smoothTo (f.midRel,  relativeLevel (f.mid,  midEnv),  dt, 0.03f, 0.20f);
+    f.highRel = smoothTo (f.highRel, relativeLevel (f.high, highEnv), dt, 0.02f, 0.15f);
 
     // ---------------------------------------------------------------- onsets
     f.kick  *= std::exp (-dt / 0.14f);

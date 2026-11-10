@@ -40,9 +40,9 @@ void TokenAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         buffer.clear (ch, 0, numSamples);
 
     // Transport for tempo-synced image changes (only atomics - real-time safe)
-    if (auto* playHead = getPlayHead())
+    if (auto* hostPlayHead = getPlayHead())
     {
-        if (auto position = playHead->getPosition())
+        if (auto position = hostPlayHead->getPosition())
         {
             if (auto bpm = position->getBpm())
                 hostBpm.store (*bpm);

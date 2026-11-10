@@ -404,7 +404,7 @@ void TokenEditor::paintScreen (juce::Graphics& g, const look::Look& lk)
 
 void TokenEditor::paintInfo (juce::Graphics& g, const look::Look& lk)
 {
-    const auto s = screenRect.reduced (14.0f, 10.0f);
+    auto s = screenRect.reduced (14.0f, 10.0f);
 
     if (clean)
     {
