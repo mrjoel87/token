@@ -1,0 +1,25 @@
+name: Build TOKEN VST3
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Configure (downloads JUCE)
+        run: cmake -S . -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Upload TOKEN.vst3
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOKEN-vst3
+          path: build/TOKEN_artefacts/Release/VST3/
+          if-no-files-found: error
