@@ -1,4 +1,4 @@
-# Builds TOKEN.vst3 with Visual Studio 2022 (Build Tools are enough) and CMake.
+﻿# Builds "SMSW TOTEM.vst3" with Visual Studio 2022 (Build Tools are enough) and CMake.
 # Usage:
 #   .\build.ps1                               # downloads JUCE automatically
 #   .\build.ps1 -JucePath "I:\SMSW\tools\JUCE" # use a local JUCE checkout
@@ -12,7 +12,7 @@ $root  = $PSScriptRoot
 $build = Join-Path $root "build"
 
 $configureArgs = @("-S", $root, "-B", $build, "-G", "Visual Studio 17 2022", "-A", "x64")
-if ($JucePath -ne "") { $configureArgs += "-DTOKEN_JUCE_PATH=$JucePath" }
+if ($JucePath -ne "") { $configureArgs += "-DTOTEM_JUCE_PATH=$JucePath" }
 
 cmake @configureArgs
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
@@ -20,7 +20,7 @@ if ($LASTEXITCODE -ne 0) { throw "CMake configure failed" }
 cmake --build $build --config $Config --parallel
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
-$vst3 = Join-Path $build "TOKEN_artefacts\$Config\VST3\TOKEN.vst3"
+$vst3 = Join-Path $build "TOKEN_artefacts\$Config\VST3\SMSW TOTEM.vst3"
 if (Test-Path $vst3) {
     Write-Host ""
     Write-Host "Built: $vst3" -ForegroundColor Cyan

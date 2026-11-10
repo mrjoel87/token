@@ -4,12 +4,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "PluginProcessor.h"
 #include "AudioAnalyser.h"
-#include "Oscilloscope.h"
-#include "World/WorldEngine.h"
-#include "Transmission/TransmissionEngine.h"
-#include "UI/TokenLookAndFeel.h"
+#include "ColourEngine.h"
+#include "Visualiser.h"
+#include "Theme.h"
+#include "Transport.h"
+#include "UI/TotemLookAndFeel.h"
 #include "UI/Controls.h"
-#include <array>
 
 namespace token
 {
@@ -24,22 +24,16 @@ public:
     void mouseDoubleClick (const juce::MouseEvent&) override;
 
 private:
-    struct EngravedLabel
+    struct Caption
     {
         juce::String text;
         juce::Rectangle<float> area;
-        float height;
-        juce::Justification justification;
     };
-
-    using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
 
     // frame loop
     void frame();
-    ScopeSettings readScopeSettings() const;
-    tx::TxSettings readTxSettings() const;
-    tx::Transport readTransport (double now) const;
-    void applyCurrentTheme();
+    Transport readTransport (double now) const;
+    bool lightTheme() const;
 
     // layout
     void applyMode (DisplayMode newMode, bool force);
@@ -47,72 +41,45 @@ private:
     void layoutStrip();
     void layoutBox();
     void layoutClean();
-    void placeKnobs (juce::Rectangle<float> area, std::array<juce::Slider*, 3> knobs, std::array<const char*, 3> names,
-                     float knobSize, float labelHeight);
-    juce::Rectangle<float> scopeArea() const;
-    juce::Rectangle<float> spectrumArea() const;
+    juce::Rectangle<float> visualArea() const;
 
     // painting
-    void paintChassis (juce::Graphics&);
-    void paintScreen (juce::Graphics&);
-    void paintScreenOverlay (juce::Graphics&);
-    void paintHud (juce::Graphics&);
-    void paintPanel (juce::Graphics&);
-    void paintBrand (juce::Graphics&);
+    void paintScreen (juce::Graphics&, const look::Look&);
+    void paintWordmark (juce::Graphics&, const look::Look&, juce::Rectangle<float>, bool compact);
+    void paintInfo (juce::Graphics&, const look::Look&);
 
     TokenAudioProcessor& proc;
-    TokenLookAndFeel lookAndFeel;
+    TotemLookAndFeel lookAndFeel;
 
-    juce::Slider reactKnob, chaosKnob, glowKnob;
-    juce::Slider densityKnob, mysteryKnob, visibilityKnob;
-    std::unique_ptr<SliderAttachment> reactAttachment, chaosAttachment, glowAttachment;
-    std::unique_ptr<SliderAttachment> densityAttachment, mysteryAttachment, visibilityAttachment;
-
-    SegmentSelector modeSelector, sceneSelector, displaySelector;
-    LedToggle stereoToggle, gainToggle, spectrumToggle, cleanToggle;
-
-    SegmentSelector syncSelector, speedSelector, themeSelector;
-    LedToggle allToggle, lostToggle, occultToggle, humanToggle, natureToggle, roadsToggle, rareToggle;
+    SegmentSelector visualSelector, colourSelector, themeSelector, layoutSelector;
+    LedToggle cleanToggle;
+    juce::Slider intensitySlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> intensityAttachment;
 
     std::atomic<float>* pMode = nullptr;
-    std::atomic<float>* pReact = nullptr;
-    std::atomic<float>* pChaos = nullptr;
-    std::atomic<float>* pGlow = nullptr;
-    std::atomic<float>* pScene = nullptr;
-    std::atomic<float>* pClean = nullptr;
-    std::atomic<float>* pDisplay = nullptr;
-    std::atomic<float>* pStereo = nullptr;
-    std::atomic<float>* pAutoGain = nullptr;
-    std::atomic<float>* pSpectrum = nullptr;
+    std::atomic<float>* pVisual = nullptr;
     std::atomic<float>* pTheme = nullptr;
-    std::atomic<float>* pAll = nullptr;
-    std::array<std::atomic<float>*, tx::numCategories> pCategories {};
-    std::atomic<float>* pSync = nullptr;
-    std::atomic<float>* pSpeed = nullptr;
-    std::atomic<float>* pDensity = nullptr;
-    std::atomic<float>* pMystery = nullptr;
-    std::atomic<float>* pVisibility = nullptr;
-    std::atomic<float>* pRare = nullptr;
+    std::atomic<float>* pColour = nullptr;
+    std::atomic<float>* pIntensity = nullptr;
+    std::atomic<float>* pClean = nullptr;
 
     DisplayMode mode = DisplayMode::Box;
     bool clean = false, applyingMode = false, hasFrame = false;
 
-    juce::Rectangle<float> screenRect, panelRect, brandRect, txRowRect;
-    std::vector<EngravedLabel> labels;
+    juce::Rectangle<float> screenRect, brandRect, barRect;
+    std::vector<Caption> captions;
 
     ScopeHistory history;
     std::vector<float> pullLeft, pullRight;
     AudioAnalyser analyser;
-    Oscilloscope scope;
-    WorldEngine world;
-    WorldContext ctx;
-    tx::TransmissionEngine transmission;
-    tx::TxContext txCtx;
-    ScopeSettings scopeSettings;
-    SceneMode sceneMode = SceneMode::Auto;
+    Visualiser visualiser;
+    ColourEngine colours;
+    VisualSettings visualSettings;
+    Transport transport;
+    float time = 0.0f;
     juce::Random fxRandom;
 
-    juce::Image brushedTexture, grainTexture, scanTexture;
+    juce::Image grainTexture;
     double startTime = 0.0, lastTime = 0.0;
     std::unique_ptr<juce::VBlankAttachment> vblank;
 

@@ -1,6 +1,6 @@
 #include "Controls.h"
-#include "TokenLookAndFeel.h"
-#include "../Palette.h"
+#include "TotemLookAndFeel.h"
+#include "../Theme.h"
 
 namespace token
 {
@@ -27,44 +27,37 @@ int SegmentSelector::indexAt (float x) const noexcept
 
 void SegmentSelector::paint (juce::Graphics& g)
 {
+    const auto& lk = look::active();
     const auto b = getLocalBounds().toFloat().reduced (0.5f);
     const int n = juce::jmax (1, labels.size());
     const float segW = b.getWidth() / (float) n;
-    const float textH = juce::jlimit (7.0f, 11.0f, b.getHeight() * 0.56f);
+    const float radius = b.getHeight() * 0.5f;
+    const float textH = juce::jlimit (8.0f, 11.5f, b.getHeight() * 0.48f);
 
-    // recess
-    g.setColour (pal::lightScreen ? juce::Colour (0xffc4c5c1) : juce::Colour (0xff0a0b0e));
-    g.fillRoundedRectangle (b, 3.0f);
-    g.setColour (juce::Colours::black.withAlpha (0.8f));
-    g.drawRoundedRectangle (b, 3.0f, 1.0f);
-    g.setColour (juce::Colours::white.withAlpha (0.05f));
-    g.drawHorizontalLine ((int) b.getBottom(), b.getX() + 3.0f, b.getRight() - 3.0f);
+    g.setColour (lk.pillOff);
+    g.fillRoundedRectangle (b, radius);
+    g.setColour (lk.pillEdge);
+    g.drawRoundedRectangle (b, radius, 1.0f);
 
     for (int i = 0; i < n; ++i)
     {
         const auto r = juce::Rectangle<float> (b.getX() + segW * (float) i, b.getY(), segW, b.getHeight());
         const bool isSel = i == selected;
 
-        if (i > 0)
-        {
-            g.setColour (juce::Colours::black.withAlpha (0.6f));
-            g.fillRect (r.getX() - 0.5f, r.getY() + 3.0f, 1.0f, r.getHeight() - 6.0f);
-        }
-
         if (isSel)
         {
-            const auto inner = r.reduced (1.5f);
-            juce::ColourGradient grad (pal::cyan.withAlpha (0.16f), 0.0f, inner.getY(), pal::cyan.withAlpha (0.04f), 0.0f, inner.getBottom(), false);
-            g.setGradientFill (grad);
-            g.fillRoundedRectangle (inner, 2.0f);
-            g.setColour (pal::cyan.withAlpha (0.35f));
-            g.drawRoundedRectangle (inner, 2.0f, 0.7f);
+            const auto inner = r.reduced (2.0f);
+            g.setColour (lk.pillOn);
+            g.fillRoundedRectangle (inner, inner.getHeight() * 0.5f);
+            if (! lk.light)
+            {
+                g.setColour (look::accent().withAlpha (0.55f));
+                g.drawRoundedRectangle (inner, inner.getHeight() * 0.5f, 0.8f);
+            }
         }
 
-        g.setFont (ui::font (textH, isSel, 0.12f));
-        const auto colour = isSel ? pal::cyan.interpolatedWith (pal::core, 0.3f)
-                                  : pal::gold.withAlpha (i == hover ? 0.85f : 0.45f);
-        g.setColour (colour);
+        g.setFont (ui::font (textH, isSel ? "SemiBold" : "Regular", 0.14f));
+        g.setColour (isSel ? lk.pillOnText : (i == hover ? lk.text : lk.pillOffText));
         g.drawText (labels[i], r, juce::Justification::centred, false);
     }
 }
@@ -99,36 +92,43 @@ LedToggle::LedToggle (juce::RangedAudioParameter& parameter, juce::String labelT
 
 void LedToggle::paint (juce::Graphics& g)
 {
-    const auto b = getLocalBounds().toFloat();
+    const auto& lk = look::active();
+    const auto b = getLocalBounds().toFloat().reduced (0.5f);
     const bool over = isMouseOver (true);
 
-    if (ghost && ! over)
+    if (ghost)
+    {
+        if (! over)
+            return;
+        g.setColour (lk.pillOff.withAlpha (0.85f));
+        g.fillEllipse (b);
+        g.setColour (lk.text);
+        g.drawEllipse (b.reduced (4.0f), 1.0f);
         return;
+    }
 
-    const float d = juce::jlimit (4.0f, 8.0f, b.getHeight() * 0.42f);
-    const auto led = juce::Rectangle<float> (d, d).withCentre ({ ghost ? b.getCentreX() : b.getX() + d * 0.5f + 2.0f, b.getCentreY() });
+    const float radius = b.getHeight() * 0.5f;
+    g.setColour (on ? lk.pillOn : lk.pillOff);
+    g.fillRoundedRectangle (b, radius);
+    g.setColour (on && ! lk.light ? look::accent().withAlpha (0.55f) : lk.pillEdge);
+    g.drawRoundedRectangle (b, radius, on && ! lk.light ? 0.8f : 1.0f);
 
+    const float d = juce::jlimit (4.0f, 7.0f, b.getHeight() * 0.3f);
+    const auto dot = juce::Rectangle<float> (d, d).withCentre ({ b.getX() + radius + 2.0f, b.getCentreY() });
     if (on)
     {
-        g.setColour (pal::cyan.withAlpha (0.25f));
-        g.fillEllipse (led.expanded (d * 0.6f));
-        g.setColour (pal::cyan.interpolatedWith (pal::core, 0.35f));
+        g.setColour (lk.light ? lk.pillOnText : look::accent());
+        g.fillEllipse (dot);
     }
     else
     {
-        g.setColour (juce::Colour (0xff2a1a12));
+        g.setColour (lk.pillOffText);
+        g.drawEllipse (dot, 1.0f);
     }
-    g.fillEllipse (led);
-    g.setColour (juce::Colours::black.withAlpha (0.8f));
-    g.drawEllipse (led, 0.8f);
 
-    if (! ghost)
-    {
-        const auto textArea = b.withTrimmedLeft (d + 6.0f);
-        g.setFont (ui::font (juce::jlimit (7.0f, 10.0f, b.getHeight() * 0.52f), false, 0.12f));
-        g.setColour (pal::gold.withAlpha (over ? 0.9f : 0.6f));
-        g.drawText (label, textArea, juce::Justification::centredLeft, false);
-    }
+    g.setFont (ui::font (juce::jlimit (8.0f, 11.0f, b.getHeight() * 0.46f), on ? "SemiBold" : "Regular", 0.14f));
+    g.setColour (on ? lk.pillOnText : (over ? lk.text : lk.pillOffText));
+    g.drawText (label, b.withTrimmedLeft (radius + d + 2.0f).withTrimmedRight (radius * 0.5f), juce::Justification::centred, false);
 }
 
 void LedToggle::mouseUp (const juce::MouseEvent& e)

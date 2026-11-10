@@ -5,7 +5,7 @@
 
 namespace token
 {
-/** Recessed hardware selector with illuminated segments, bound to a choice parameter. */
+/** Compact pill selector with a clear selected state, bound to a choice parameter. */
 class SegmentSelector final : public juce::Component
 {
 public:
@@ -24,7 +24,7 @@ private:
     juce::ParameterAttachment attachment;
 };
 
-/** Tiny LED push-switch bound to a bool parameter. In "ghost" mode it is invisible until hovered. */
+/** Small on/off pill bound to a bool parameter. In "ghost" mode it is invisible until hovered. */
 class LedToggle final : public juce::Component
 {
 public:

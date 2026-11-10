@@ -7,7 +7,7 @@ TokenAudioProcessor::TokenAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "TOKEN", createParameterLayout())
+      apvts (*this, nullptr, "TOKEN", createParameterLayout())   // state tag kept for existing Live Sets
 {
 }
 
@@ -29,7 +29,7 @@ bool TokenAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) co
 
 void TokenAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
-    // TOKEN never modifies the audio: the buffer passes through untouched.
+    // TOTEM never modifies the audio: the buffer passes through untouched.
     juce::ScopedNoDenormals noDenormals;
 
     const int numIn  = getTotalNumInputChannels();

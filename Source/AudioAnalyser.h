@@ -27,6 +27,14 @@ struct AudioFeatures
     float centroid = 0.5f;                               // 0..1 spectral brightness (log 100 Hz .. 8 kHz)
     float spectralMotion = 0.0f;                         // how fast the brightness is changing
 
+    // Adaptive (relative) band levels: each band compared with its own recent maximum, so quiet
+    // mixes still move the visuals and loud mixes don't saturate them.
+    float bassRel = 0.0f, midRel = 0.0f, highRel = 0.0f;
+    float hat = 0.0f;                                    // hi-hat / fine percussion envelope
+    bool hatHit = false;
+    float drop = 0.0f;                                   // 1 right after a sudden rise in energy, decays over seconds
+    float breakdown = 0.0f;                              // > 0 while energy is falling away from a louder section
+
     EnergyState state = EnergyState::Dream;
     EnergyState previousState = EnergyState::Dream;
     bool stateChanged = false;
@@ -63,10 +71,12 @@ private:
     std::array<float, fftSize> window {};
     std::array<float, fftSize / 2> prevMag {};
 
-    OnsetDetector kickDetector, snareDetector;
+    OnsetDetector kickDetector, snareDetector, hatDetector;
     AudioFeatures f;
 
     float onsetEnergy = 0.0f, longTermDb = -40.0f, stateHeld = 0.0f;
     float intensityPrev = 0.0f, peakEnv = 0.05f, noDataTime = 0.0f;
+    float bassEnv = 0.3f, midEnv = 0.3f, highEnv = 0.3f;
+    float slowIntensity = 0.0f, dropCooldown = 0.0f;
 };
 }

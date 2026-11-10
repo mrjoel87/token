@@ -76,7 +76,7 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
     f.peak  = smoothTo (f.peak, peakNow, dt, 0.005f, 0.3f);
 
     // ---------------------------------------------------------------- FFT bands + flux
-    float bassE = 0.0f, midE = 0.0f, highE = 0.0f, kickFlux = 0.0f, snareFlux = 0.0f;
+    float bassE = 0.0f, midE = 0.0f, highE = 0.0f, kickFlux = 0.0f, snareFlux = 0.0f, hatFlux = 0.0f;
 
     if (hasData)
     {
@@ -117,6 +117,7 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
         band (2500.0f, 14000.0f, highE, nullptr);
         band (30.0f, 140.0f, unused, &kickFlux);
         band (1500.0f, 9000.0f, unused, &snareFlux);
+        band (7000.0f, (float) juce::jmin (16000.0, sr * 0.45), unused, &hatFlux);
 
         // log-spaced display spectrum
         const float fMin = 30.0f;
@@ -168,19 +169,32 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
     f.mid  = smoothTo (f.mid,  hasData ? level01 (midE,  -54.0f, -10.0f) : 0.0f, dt, 0.03f, 0.22f);
     f.high = smoothTo (f.high, hasData ? level01 (highE, -60.0f, -14.0f) : 0.0f, dt, 0.02f, 0.20f);
 
+    // adaptive sensitivity: compare each band with its own recent peak
+    auto relative = [dt] (float level, float& env)
+    {
+        env = juce::jmax (level, env * std::exp (-dt / 6.0f), 0.18f);
+        return juce::jlimit (0.0f, 1.0f, level / env);
+    };
+    f.bassRel = smoothTo (f.bassRel, relative (f.bass, bassEnv), dt, 0.02f, 0.15f);
+    f.midRel  = smoothTo (f.midRel,  relative (f.mid,  midEnv),  dt, 0.03f, 0.20f);
+    f.highRel = smoothTo (f.highRel, relative (f.high, highEnv), dt, 0.02f, 0.15f);
+
     // ---------------------------------------------------------------- onsets
     f.kick  *= std::exp (-dt / 0.14f);
     f.snare *= std::exp (-dt / 0.10f);
     onsetEnergy *= std::exp (-dt / 2.0f);
-    f.kickHit = f.snareHit = false;
+    f.hat   *= std::exp (-dt / 0.06f);
+    f.kickHit = f.snareHit = f.hatHit = false;
 
     if (hasData && numNew > 0)
     {
         const float k = kickDetector.process (kickFlux, dt, 0.11f, 1.6f, 0.04f);
         const float s = snareDetector.process (snareFlux, dt, 0.08f, 1.8f, 0.05f);
+        const float hh = hatDetector.process (hatFlux, dt, 0.05f, 1.6f, 0.02f);
 
-        if (k > 0.0f) { f.kickHit = true;  f.kick  = juce::jmax (f.kick, k);  onsetEnergy += 1.0f; }
-        if (s > 0.0f) { f.snareHit = true; f.snare = juce::jmax (f.snare, s); onsetEnergy += 1.0f; }
+        if (k > 0.0f)  { f.kickHit = true;  f.kick  = juce::jmax (f.kick, k);  onsetEnergy += 1.0f; }
+        if (s > 0.0f)  { f.snareHit = true; f.snare = juce::jmax (f.snare, s); onsetEnergy += 1.0f; }
+        if (hh > 0.0f) { f.hatHit = true;   f.hat   = juce::jmax (f.hat, hh);  onsetEnergy += 0.5f; }
     }
 
     f.onsetRate = onsetEnergy / 2.0f;
@@ -203,6 +217,19 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
 
     f.sustain = smoothTo (f.sustain, loud * (1.0f - juce::jlimit (0.0f, 1.0f, f.onsetRate / 5.0f)), dt, 1.2f, 2.0f);
     f.silence = smoothTo (f.silence, loud < 0.02f ? 1.0f : 0.0f, dt, 1.5f, 0.1f);
+
+    // drops (sudden rise in energy) and breakdowns (energy falling away)
+    slowIntensity = smoothTo (slowIntensity, f.intensity, dt, 5.0f);
+    dropCooldown = juce::jmax (0.0f, dropCooldown - dt);
+    f.drop *= std::exp (-dt / 3.5f);
+
+    if (dropCooldown <= 0.0f && f.intensity > 0.55f && f.intensity - slowIntensity > 0.16f)
+    {
+        f.drop = 1.0f;
+        dropCooldown = 8.0f;
+    }
+
+    f.breakdown = smoothTo (f.breakdown, juce::jlimit (0.0f, 1.0f, (slowIntensity - f.intensity) * 3.0f), dt, 0.8f, 2.0f);
 
     // ---------------------------------------------------------------- Dream / Pulse / Chaos (hysteresis + hold)
     f.stateChanged = false;
