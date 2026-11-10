@@ -67,24 +67,39 @@ namespace
         g.setColour (juce::Colours::black.withAlpha (0.75f));
         g.drawLine ({ c - d, c + d }, 1.2f);
     }
+
+    bool on (const std::atomic<float>* p) { return p != nullptr && p->load() > 0.5f; }
 }
 
 // =================================================================================================
 TokenEditor::TokenEditor (TokenAudioProcessor& p)
     : AudioProcessorEditor (&p),
       proc (p),
-      modeSelector    (*p.apvts.getParameter (ids::mode),     { "STRIP", "BOX" }),
-      sceneSelector   (*p.apvts.getParameter (ids::scene),    { "AUTO", "MIN", "DREAM", "MYSTIC", "NORSE" }),
-      displaySelector (*p.apvts.getParameter (ids::display),  { "TRIG", "SCROLL" }),
-      stereoToggle    (*p.apvts.getParameter (ids::stereo),   "STEREO"),
-      gainToggle      (*p.apvts.getParameter (ids::autoGain), "AGC"),
-      spectrumToggle  (*p.apvts.getParameter (ids::spectrum), "SPEC"),
-      cleanToggle     (*p.apvts.getParameter (ids::clean),    "CLEAN")
+      modeSelector    (*p.apvts.getParameter (ids::mode),      { "STRIP", "BOX" }),
+      sceneSelector   (*p.apvts.getParameter (ids::scene),     { "AUTO", "MIN", "DREAM", "MYSTIC", "NORSE" }),
+      displaySelector (*p.apvts.getParameter (ids::display),   { "TRIG", "SCROLL" }),
+      stereoToggle    (*p.apvts.getParameter (ids::stereo),    "STEREO"),
+      gainToggle      (*p.apvts.getParameter (ids::autoGain),  "AGC"),
+      spectrumToggle  (*p.apvts.getParameter (ids::spectrum),  "SPEC"),
+      cleanToggle     (*p.apvts.getParameter (ids::clean),     "CLEAN"),
+      syncSelector    (*p.apvts.getParameter (ids::sync),      { "FREE", "AUTO", "1/4", "1/2", "1", "2", "4", "8", "16" }),
+      speedSelector   (*p.apvts.getParameter (ids::speed),     { "SLOW", "NORM", "FAST", "AUTO" }),
+      themeSelector   (*p.apvts.getParameter (ids::theme),     { "DARK", "LIGHT", "TEAL", "GOLD" }),
+      allToggle       (*p.apvts.getParameter (ids::allImages), "ALL"),
+      lostToggle      (*p.apvts.getParameter (ids::catLost),   "LOST"),
+      occultToggle    (*p.apvts.getParameter (ids::catOccult), "OCCULT"),
+      humanToggle     (*p.apvts.getParameter (ids::catHuman),  "HUMAN"),
+      natureToggle    (*p.apvts.getParameter (ids::catNature), "NATURE"),
+      roadsToggle     (*p.apvts.getParameter (ids::catRoads),  "ROADS"),
+      rareToggle      (*p.apvts.getParameter (ids::rare),      "RARE APPARITIONS")
 {
+    pTheme = p.apvts.getRawParameterValue (ids::theme);
+    applyCurrentTheme();
+
     setLookAndFeel (&lookAndFeel);
     setOpaque (true);
 
-    for (auto* k : { &reactKnob, &chaosKnob, &glowKnob })
+    for (auto* k : { &reactKnob, &chaosKnob, &glowKnob, &densityKnob, &mysteryKnob, &visibilityKnob })
     {
         k->setSliderStyle (juce::Slider::RotaryHorizontalVerticalDrag);
         k->setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
@@ -93,27 +108,47 @@ TokenEditor::TokenEditor (TokenAudioProcessor& p)
         addAndMakeVisible (*k);
     }
 
-    reactAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::react, reactKnob);
-    chaosAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::chaos, chaosKnob);
-    glowAttachment  = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::glow,  glowKnob);
-    reactKnob.setDoubleClickReturnValue (true, defaults::react);
-    chaosKnob.setDoubleClickReturnValue (true, defaults::chaos);
-    glowKnob.setDoubleClickReturnValue  (true, defaults::glow);
+    reactAttachment      = std::make_unique<SliderAttachment> (p.apvts, ids::react,      reactKnob);
+    chaosAttachment      = std::make_unique<SliderAttachment> (p.apvts, ids::chaos,      chaosKnob);
+    glowAttachment       = std::make_unique<SliderAttachment> (p.apvts, ids::glow,       glowKnob);
+    densityAttachment    = std::make_unique<SliderAttachment> (p.apvts, ids::density,    densityKnob);
+    mysteryAttachment    = std::make_unique<SliderAttachment> (p.apvts, ids::mystery,    mysteryKnob);
+    visibilityAttachment = std::make_unique<SliderAttachment> (p.apvts, ids::visibility, visibilityKnob);
+
+    reactKnob.setDoubleClickReturnValue      (true, defaults::react);
+    chaosKnob.setDoubleClickReturnValue      (true, defaults::chaos);
+    glowKnob.setDoubleClickReturnValue       (true, defaults::glow);
+    densityKnob.setDoubleClickReturnValue    (true, defaults::density);
+    mysteryKnob.setDoubleClickReturnValue    (true, defaults::mystery);
+    visibilityKnob.setDoubleClickReturnValue (true, defaults::visibility);
 
     for (auto* c : std::initializer_list<juce::Component*> { &modeSelector, &sceneSelector, &displaySelector,
-                                                             &stereoToggle, &gainToggle, &spectrumToggle, &cleanToggle })
+                                                             &stereoToggle, &gainToggle, &spectrumToggle, &cleanToggle,
+                                                             &syncSelector, &speedSelector, &themeSelector,
+                                                             &allToggle, &lostToggle, &occultToggle, &humanToggle,
+                                                             &natureToggle, &roadsToggle, &rareToggle })
         addAndMakeVisible (c);
 
-    pMode     = p.apvts.getRawParameterValue (ids::mode);
-    pReact    = p.apvts.getRawParameterValue (ids::react);
-    pChaos    = p.apvts.getRawParameterValue (ids::chaos);
-    pGlow     = p.apvts.getRawParameterValue (ids::glow);
-    pScene    = p.apvts.getRawParameterValue (ids::scene);
-    pClean    = p.apvts.getRawParameterValue (ids::clean);
-    pDisplay  = p.apvts.getRawParameterValue (ids::display);
-    pStereo   = p.apvts.getRawParameterValue (ids::stereo);
-    pAutoGain = p.apvts.getRawParameterValue (ids::autoGain);
-    pSpectrum = p.apvts.getRawParameterValue (ids::spectrum);
+    pMode       = p.apvts.getRawParameterValue (ids::mode);
+    pReact      = p.apvts.getRawParameterValue (ids::react);
+    pChaos      = p.apvts.getRawParameterValue (ids::chaos);
+    pGlow       = p.apvts.getRawParameterValue (ids::glow);
+    pScene      = p.apvts.getRawParameterValue (ids::scene);
+    pClean      = p.apvts.getRawParameterValue (ids::clean);
+    pDisplay    = p.apvts.getRawParameterValue (ids::display);
+    pStereo     = p.apvts.getRawParameterValue (ids::stereo);
+    pAutoGain   = p.apvts.getRawParameterValue (ids::autoGain);
+    pSpectrum   = p.apvts.getRawParameterValue (ids::spectrum);
+    pAll        = p.apvts.getRawParameterValue (ids::allImages);
+    pCategories = { p.apvts.getRawParameterValue (ids::catLost),   p.apvts.getRawParameterValue (ids::catOccult),
+                    p.apvts.getRawParameterValue (ids::catHuman),  p.apvts.getRawParameterValue (ids::catNature),
+                    p.apvts.getRawParameterValue (ids::catRoads) };
+    pSync       = p.apvts.getRawParameterValue (ids::sync);
+    pSpeed      = p.apvts.getRawParameterValue (ids::speed);
+    pDensity    = p.apvts.getRawParameterValue (ids::density);
+    pMystery    = p.apvts.getRawParameterValue (ids::mystery);
+    pVisibility = p.apvts.getRawParameterValue (ids::visibility);
+    pRare       = p.apvts.getRawParameterValue (ids::rare);
 
     pullLeft.resize ((size_t) ScopeFifo::capacity);
     pullRight.resize ((size_t) ScopeFifo::capacity);
@@ -137,6 +172,12 @@ TokenEditor::~TokenEditor()
     setLookAndFeel (nullptr);
 }
 
+void TokenEditor::applyCurrentTheme()
+{
+    // The palette is shared by every TOKEN window, so each one re-applies its own theme before use.
+    pal::applyTheme (pTheme != nullptr ? juce::jlimit (0, 3, juce::roundToInt (pTheme->load())) : 0);
+}
+
 // =================================================================================================
 //  Layout
 // =================================================================================================
@@ -151,7 +192,7 @@ void TokenEditor::applyMode (DisplayMode newMode, bool force)
     if (mode == DisplayMode::Strip)
         setResizeLimits (560, 120, 3200, 560);
     else
-        setResizeLimits (560, 400, 3200, 2200);
+        setResizeLimits (640, 520, 3200, 2200);
 
     const int w = mode == DisplayMode::Strip ? proc.stripW.load() : proc.boxW.load();
     const int h = mode == DisplayMode::Strip ? proc.stripH.load() : proc.boxH.load();
@@ -171,9 +212,13 @@ void TokenEditor::updateVisibility()
                                                              &modeSelector, &sceneSelector, &displaySelector })
         c->setVisible (showPanel);
 
-    stereoToggle.setVisible (showBox);
-    gainToggle.setVisible (showBox);
-    spectrumToggle.setVisible (showBox);
+    for (auto* c : std::initializer_list<juce::Component*> { &stereoToggle, &gainToggle, &spectrumToggle,
+                                                             &densityKnob, &mysteryKnob, &visibilityKnob,
+                                                             &syncSelector, &speedSelector, &themeSelector,
+                                                             &allToggle, &lostToggle, &occultToggle, &humanToggle,
+                                                             &natureToggle, &roadsToggle, &rareToggle })
+        c->setVisible (showBox);
+
     cleanToggle.setVisible (true);
     cleanToggle.setGhost (clean);
 }
@@ -186,19 +231,18 @@ void TokenEditor::resized()
         else                            { proc.boxW   = getWidth(); proc.boxH   = getHeight(); }
     }
 
-    if (clean)                          layoutClean();
+    if (clean)                           layoutClean();
     else if (mode == DisplayMode::Strip) layoutStrip();
     else                                 layoutBox();
 }
 
-void TokenEditor::placeKnobs (juce::Rectangle<float> area, float knobSize, float labelHeight)
+void TokenEditor::placeKnobs (juce::Rectangle<float> area, std::array<juce::Slider*, 3> knobs, std::array<const char*, 3> names,
+                              float knobSize, float labelHeight)
 {
-    juce::Slider* knobs[] = { &reactKnob, &chaosKnob, &glowKnob };
-    const char* names[] = { "REACT", "CHAOS", "GLOW" };
     const float cellW = area.getWidth() / 3.0f;
     const float top = area.getCentreY() - (knobSize + labelHeight) * 0.5f;
 
-    for (int i = 0; i < 3; ++i)
+    for (size_t i = 0; i < 3; ++i)
     {
         const float cx = area.getX() + cellW * ((float) i + 0.5f);
         knobs[i]->setBounds (juce::Rectangle<float> (cx - knobSize * 0.5f, top, knobSize, knobSize).toNearestInt());
@@ -213,44 +257,82 @@ void TokenEditor::layoutBox()
     const auto b = getLocalBounds().toFloat();
     auto area = b.reduced (18.0f);
 
-    const float deckH = juce::jlimit (104.0f, 150.0f, b.getHeight() * 0.2f);
+    const float deckH = juce::jlimit (200.0f, 290.0f, b.getHeight() * 0.34f);
     auto deck = area.removeFromBottom (deckH);
     area.removeFromBottom (16.0f);
     screenRect = area;
     panelRect = deck;
 
     auto inner = deck.reduced (14.0f, 10.0f);
-    brandRect = inner.removeFromLeft (juce::jmin (250.0f, inner.getWidth() * 0.28f));
-    auto right = inner.removeFromRight (juce::jmin (330.0f, inner.getWidth() * 0.45f));
-    inner.reduce (8.0f, 0.0f);
+    auto row1 = inner.removeFromTop ((inner.getHeight() - 10.0f) * 0.5f);
+    inner.removeFromTop (10.0f);
+    auto row2 = inner;
+    txRowRect = row2;
 
-    const float labelH = 14.0f;
-    const float knobSize = juce::jmax (36.0f, juce::jmin (inner.getHeight() - labelH - 2.0f, inner.getWidth() / 3.0f - 12.0f));
-    placeKnobs (inner, knobSize, labelH);
-
-    const float rowH = juce::jmin (20.0f, (right.getHeight() - 9.0f) / 4.0f);
-    const float gap = (right.getHeight() - rowH * 4.0f) / 3.0f;
+    const float leftW  = juce::jmin (250.0f, row1.getWidth() * 0.28f);
+    const float rightW = juce::jmin (340.0f, row1.getWidth() * 0.42f);
     const float capW = 46.0f;
+    const float labelH = 13.0f;
 
-    auto row = [&] (int i) { return juce::Rectangle<float> (right.getX(), right.getY() + (float) i * (rowH + gap), right.getWidth(), rowH); };
-
-    auto placeRow = [&] (juce::Component& comp, const char* caption, juce::Rectangle<float> r)
+    auto placeColumn = [this, capW] (juce::Rectangle<float> col, std::initializer_list<std::pair<juce::Component*, const char*>> items)
     {
-        labels.push_back ({ caption, r.removeFromLeft (capW), 8.5f, juce::Justification::centredLeft });
-        comp.setBounds (r.toNearestInt());
+        const int n = (int) items.size();
+        const float rowH = juce::jmin (19.0f, (col.getHeight() - 6.0f) / (float) n);
+        const float gap = n > 1 ? (col.getHeight() - rowH * (float) n) / (float) (n - 1) : 0.0f;
+        int i = 0;
+        for (const auto& item : items)
+        {
+            auto r = juce::Rectangle<float> (col.getX(), col.getY() + (float) i * (rowH + gap), col.getWidth(), rowH);
+            if (item.second != nullptr)
+                labels.push_back ({ item.second, r.removeFromLeft (capW), 8.5f, juce::Justification::centredLeft });
+            item.first->setBounds (r.toNearestInt());
+            ++i;
+        }
     };
 
-    placeRow (modeSelector,    "MODE",  row (0));
-    placeRow (sceneSelector,   "SCENE", row (1));
-    placeRow (displaySelector, "SCOPE", row (2));
+    // ---- row 1: brand | REACT CHAOS GLOW | MODE SCENE SCOPE OPTIONS
+    brandRect = row1.removeFromLeft (leftW);
+    auto right1 = row1.removeFromRight (rightW);
+    row1.reduce (8.0f, 0.0f);
+    const float knob1 = juce::jmax (28.0f, juce::jmin (row1.getHeight() - labelH - 2.0f, row1.getWidth() / 3.0f - 12.0f));
+    placeKnobs (row1, { &reactKnob, &chaosKnob, &glowKnob }, { "REACT", "CHAOS", "GLOW" }, knob1, labelH);
 
-    auto leds = row (3);
-    labels.push_back ({ "OPTION", leds.removeFromLeft (capW), 8.5f, juce::Justification::centredLeft });
-    const float lw = leds.getWidth() / 4.0f;
-    stereoToggle.setBounds   (leds.removeFromLeft (lw).toNearestInt());
-    gainToggle.setBounds     (leds.removeFromLeft (lw).toNearestInt());
-    spectrumToggle.setBounds (leds.removeFromLeft (lw).toNearestInt());
-    cleanToggle.setBounds    (leds.toNearestInt());
+    placeColumn (right1.removeFromTop (right1.getHeight() * 0.76f),
+                 { { &modeSelector, "MODE" }, { &sceneSelector, "SCENE" }, { &displaySelector, "SCOPE" } });
+    {
+        auto leds = right1.withTrimmedTop (2.0f);
+        labels.push_back ({ "OPTION", leds.removeFromLeft (capW), 8.5f, juce::Justification::centredLeft });
+        const float lw = leds.getWidth() / 4.0f;
+        stereoToggle.setBounds   (leds.removeFromLeft (lw).toNearestInt());
+        gainToggle.setBounds     (leds.removeFromLeft (lw).toNearestInt());
+        spectrumToggle.setBounds (leds.removeFromLeft (lw).toNearestInt());
+        cleanToggle.setBounds    (leds.toNearestInt());
+    }
+
+    // ---- row 2: TRANSMISSION categories | DENSITY MYSTERY VISIBLE | SYNC SPEED THEME RARE
+    auto cats = row2.removeFromLeft (leftW);
+    auto right2 = row2.removeFromRight (rightW);
+    row2.reduce (8.0f, 0.0f);
+
+    labels.push_back ({ "HIDDEN TRANSMISSION", cats.removeFromTop (16.0f), 9.0f, juce::Justification::centredLeft });
+    {
+        const float cellH = juce::jmin (20.0f, cats.getHeight() / 2.0f);
+        auto r1 = cats.removeFromTop (cellH);
+        auto r2 = cats.removeFromTop (cellH);
+        const float cw = cats.getWidth() / 3.0f;
+        allToggle.setBounds    (r1.removeFromLeft (cw).toNearestInt());
+        lostToggle.setBounds   (r1.removeFromLeft (cw).toNearestInt());
+        occultToggle.setBounds (r1.toNearestInt());
+        humanToggle.setBounds  (r2.removeFromLeft (cw).toNearestInt());
+        natureToggle.setBounds (r2.removeFromLeft (cw).toNearestInt());
+        roadsToggle.setBounds  (r2.toNearestInt());
+    }
+
+    const float knob2 = juce::jmax (28.0f, juce::jmin (row2.getHeight() - labelH - 2.0f, row2.getWidth() / 3.0f - 12.0f));
+    placeKnobs (row2, { &densityKnob, &mysteryKnob, &visibilityKnob }, { "DENSITY", "MYSTERY", "VISIBLE" }, knob2, labelH);
+
+    placeColumn (right2, { { &syncSelector, "SYNC" }, { &speedSelector, "SPEED" }, { &themeSelector, "THEME" },
+                           { &rareToggle, "EXTRA" } });
 }
 
 void TokenEditor::layoutStrip()
@@ -264,6 +346,7 @@ void TokenEditor::layoutStrip()
     area.removeFromRight (12.0f);
     screenRect = area;
     panelRect = panel;
+    txRowRect = {};
 
     auto inner = panel.reduced (8.0f, 5.0f);
     brandRect = inner.removeFromTop (juce::jmin (24.0f, inner.getHeight() * 0.18f));
@@ -283,14 +366,14 @@ void TokenEditor::layoutStrip()
 
     const float labelH = 12.0f;
     const float knobSize = juce::jmax (24.0f, juce::jmin (inner.getHeight() - labelH, inner.getWidth() / 3.0f - 8.0f));
-    placeKnobs (inner, knobSize, labelH);
+    placeKnobs (inner, { &reactKnob, &chaosKnob, &glowKnob }, { "REACT", "CHAOS", "GLOW" }, knobSize, labelH);
 }
 
 void TokenEditor::layoutClean()
 {
     labels.clear();
     screenRect = getLocalBounds().toFloat().reduced (3.0f);
-    panelRect = brandRect = {};
+    panelRect = brandRect = txRowRect = {};
     cleanToggle.setBounds (getWidth() - 28, 8, 20, 20);
 }
 
@@ -323,14 +406,44 @@ void TokenEditor::mouseDoubleClick (const juce::MouseEvent&)
 ScopeSettings TokenEditor::readScopeSettings() const
 {
     ScopeSettings s;
-    s.scrolling = pDisplay->load() > 0.5f;
-    s.stereo    = pStereo->load() > 0.5f;
-    s.autoGain  = pAutoGain->load() > 0.5f;
-    s.spectrum  = pSpectrum->load() > 0.5f;
+    s.scrolling = on (pDisplay);
+    s.stereo    = on (pStereo);
+    s.autoGain  = on (pAutoGain);
+    s.spectrum  = on (pSpectrum);
     s.glow      = pGlow->load();
     s.react     = pReact->load();
     s.strip     = mode == DisplayMode::Strip;
     return s;
+}
+
+tx::TxSettings TokenEditor::readTxSettings() const
+{
+    tx::TxSettings s;
+    const bool all = on (pAll);
+    for (size_t i = 0; i < s.categories.size(); ++i)
+        s.categories[i] = all || on (pCategories[i]);
+
+    s.sync       = (SyncMode)  juce::jlimit (0, 8, juce::roundToInt (pSync->load()));
+    s.speed      = (SpeedMode) juce::jlimit (0, 3, juce::roundToInt (pSpeed->load()));
+    s.density    = pDensity->load();
+    s.mystery    = pMystery->load();
+    s.visibility = pVisibility->load();
+    s.rare       = on (pRare);
+    return s;
+}
+
+tx::Transport TokenEditor::readTransport (double now) const
+{
+    tx::Transport t;
+    t.bpm = juce::jlimit (20.0, 400.0, proc.hostBpm.load());
+    t.playing = proc.hostPlaying.load();
+    t.beatsPerBar = proc.hostBeatsPerBar.load();
+    t.ppq = proc.hostPpq.load();
+
+    if (t.playing)   // extrapolate between audio blocks for smooth motion
+        t.ppq += juce::jlimit (0.0, 0.25, now - proc.hostPpqTime.load()) * t.bpm / 60.0;
+
+    return t;
 }
 
 void TokenEditor::frame()
@@ -339,8 +452,10 @@ void TokenEditor::frame()
     const float dt = juce::jlimit (1.0f / 240.0f, 0.1f, (float) (now - lastTime));
     lastTime = now;
 
+    applyCurrentTheme();
+
     // discrete parameters that change the layout (may come from the host / automation)
-    const bool newClean = pClean->load() > 0.5f;
+    const bool newClean = on (pClean);
     if (newClean != clean)
     {
         clean = newClean;
@@ -348,7 +463,7 @@ void TokenEditor::frame()
         resized();
     }
 
-    const auto newMode = pMode->load() > 0.5f ? DisplayMode::Box : DisplayMode::Strip;
+    const auto newMode = on (pMode) ? DisplayMode::Box : DisplayMode::Strip;
     if (newMode != mode)
         applyMode (newMode, false);
 
@@ -379,6 +494,18 @@ void TokenEditor::frame()
     ctx.scope = &scope;
     world.update (ctx, sceneMode);
 
+    // ---- hidden transmission
+    txCtx.screen = screenRect;
+    txCtx.px = ctx.px;
+    txCtx.time = ctx.time;
+    txCtx.dt = dt;
+    txCtx.audio = &f;
+    txCtx.scope = &scope;
+    txCtx.particles = &world.getParticles();
+    txCtx.settings = readTxSettings();
+    txCtx.transport = readTransport (now);
+    transmission.update (txCtx);
+
     hasFrame = true;
     repaint();
 }
@@ -388,6 +515,7 @@ void TokenEditor::frame()
 // =================================================================================================
 void TokenEditor::paint (juce::Graphics& g)
 {
+    applyCurrentTheme();
     paintChassis (g);
 
     {
@@ -410,14 +538,14 @@ void TokenEditor::paintChassis (juce::Graphics& g)
 {
     const auto b = getLocalBounds().toFloat();
 
-    juce::ColourGradient metal (juce::Colour (0xff30343b), 0.0f, 0.0f, juce::Colour (0xff111316), 0.0f, b.getBottom(), false);
-    metal.addColour (0.06, juce::Colour (0xff3d424a));
-    metal.addColour (0.55, juce::Colour (0xff1e2126));
+    juce::ColourGradient metal (pal::chassisTop, 0.0f, 0.0f, pal::chassisBottom, 0.0f, b.getBottom(), false);
+    metal.addColour (0.06, pal::chassisSheen);
+    metal.addColour (0.55, pal::chassisMid);
     g.setGradientFill (metal);
     g.fillRect (b);
 
     g.setColour (juce::Colours::black);
-    g.setOpacity (0.6f);
+    g.setOpacity (pal::lightScreen ? 0.35f : 0.6f);
     g.drawImage (brushedTexture, b);
     g.setOpacity (1.0f);
 
@@ -428,7 +556,7 @@ void TokenEditor::paintChassis (juce::Graphics& g)
         return;
     }
 
-    // edges and gold inlay
+    // edges and inlay
     g.setColour (juce::Colours::white.withAlpha (0.10f));
     g.drawHorizontalLine (0, 0.0f, b.getRight());
     g.setColour (juce::Colours::black.withAlpha (0.6f));
@@ -445,12 +573,12 @@ void TokenEditor::paintChassis (juce::Graphics& g)
 
     // screen bezel
     const auto bezel = screenRect.expanded (7.0f);
-    juce::ColourGradient bz (juce::Colour (0xff08090b), 0.0f, bezel.getY(), juce::Colour (0xff23262c), 0.0f, bezel.getBottom(), false);
+    juce::ColourGradient bz (pal::bezelTop, 0.0f, bezel.getY(), pal::bezelBottom, 0.0f, bezel.getBottom(), false);
     g.setGradientFill (bz);
     g.fillRoundedRectangle (bezel, 9.0f);
     g.setColour (pal::gold.withAlpha (0.55f));
     g.drawRoundedRectangle (bezel.reduced (0.5f), 9.0f, 1.0f);
-    g.setColour (juce::Colours::black);
+    g.setColour (juce::Colours::black.withAlpha (pal::lightScreen ? 0.4f : 1.0f));
     g.drawRoundedRectangle (screenRect.expanded (1.5f), 7.0f, 2.0f);
 
     // engraved graduation along the bezel
@@ -477,6 +605,7 @@ void TokenEditor::paintScreen (juce::Graphics& g)
 
     world.drawBackground (g, ctx);
     world.drawEvents (g, ctx, Layer::Back);
+    transmission.draw (g, txCtx);
 
     if (mode == DisplayMode::Box && scopeSettings.spectrum)
         scope.drawSpectrum (g, f, spectrumArea(), scopeSettings.glow);
@@ -495,19 +624,19 @@ void TokenEditor::paintScreenOverlay (juce::Graphics& g)
     // film grain (re-anchored every frame so it shimmers) and faint scanlines
     g.setTiledImageFill (grainTexture, fxRandom.nextInt (256), fxRandom.nextInt (256), 0.05f);
     g.fillRect (s);
-    g.setTiledImageFill (scanTexture, 0, (int) s.getY(), 0.6f);
+    g.setTiledImageFill (scanTexture, 0, (int) s.getY(), pal::lightScreen ? 0.25f : 0.6f);
     g.fillRect (s);
 
     // elliptical vignette
     const auto c = s.getCentre();
     juce::ColourGradient vig (juce::Colours::transparentBlack, c.x, c.y,
-                              juce::Colours::black.withAlpha (0.6f), c.x + s.getWidth() * 0.62f, c.y, true);
+                              juce::Colours::black.withAlpha (pal::vignette), c.x + s.getWidth() * 0.62f, c.y, true);
     juce::FillType vigFill (vig);
     vigFill.transform = juce::AffineTransform::scale (1.0f, s.getHeight() / juce::jmax (1.0f, s.getWidth()) * 1.3f, c.x, c.y);
     g.setFillType (vigFill);
     g.fillRect (s);
 
-    // black glass: diagonal reflection, top highlight, inner shadow
+    // glass: diagonal reflection, top highlight, inner shadow
     juce::ColourGradient glass (juce::Colours::white.withAlpha (0.06f), s.getX(), s.getY(),
                                 juce::Colours::transparentWhite, s.getX() + s.getWidth() * 0.45f, s.getY() + s.getHeight() * 0.9f, false);
     g.setGradientFill (glass);
@@ -516,7 +645,7 @@ void TokenEditor::paintScreenOverlay (juce::Graphics& g)
     g.setColour (juce::Colours::white.withAlpha (0.09f));
     g.fillRect (s.getX() + 8.0f, s.getY() + 1.0f, s.getWidth() - 16.0f, 1.0f);
 
-    g.setColour (juce::Colours::black.withAlpha (0.55f));
+    g.setColour (juce::Colours::black.withAlpha (pal::lightScreen ? 0.25f : 0.55f));
     g.drawRoundedRectangle (s, clean ? 2.0f : 6.0f, 5.0f);
 }
 
@@ -554,19 +683,40 @@ void TokenEditor::paintHud (juce::Graphics& g)
                                    : juce::String (sceneNames[(int) sceneMode]);
     g.setColour (pal::gold.withAlpha (0.45f));
     g.drawText (right, hud, juce::Justification::centredRight, false);
+
+    // transmission readout, bottom left
+    const auto status = transmission.getStatus();
+    if (status.isNotEmpty())
+    {
+        auto bottom = screenRect.reduced (12.0f, 9.0f).removeFromBottom (11.0f);
+        const bool live = txCtx.transport.playing;
+        g.setColour (pal::cyan.withAlpha (0.25f + 0.2f * std::abs (std::sin (ctx.time * 1.7f))));
+        g.fillEllipse (bottom.removeFromLeft (8.0f).withSizeKeepingCentre (4.0f, 4.0f));
+        g.setColour (pal::moon.withAlpha (0.4f));
+        g.drawText (status + (live ? "   /   SYNC" : ""), bottom, juce::Justification::centredLeft, false);
+    }
 }
 
 void TokenEditor::paintPanel (juce::Graphics& g)
 {
-    juce::ColourGradient pg (juce::Colour (0xff15171b), 0.0f, panelRect.getY(), juce::Colour (0xff1d2025), 0.0f, panelRect.getBottom(), false);
+    juce::ColourGradient pg (pal::panelTop, 0.0f, panelRect.getY(), pal::panelBottom, 0.0f, panelRect.getBottom(), false);
     g.setGradientFill (pg);
     g.fillRoundedRectangle (panelRect, 6.0f);
-    g.setColour (juce::Colours::black.withAlpha (0.7f));
+    g.setColour (juce::Colours::black.withAlpha (pal::lightScreen ? 0.3f : 0.7f));
     g.drawRoundedRectangle (panelRect.reduced (0.5f), 6.0f, 1.0f);
     g.setColour (juce::Colours::white.withAlpha (0.05f));
     g.drawHorizontalLine ((int) panelRect.getBottom(), panelRect.getX() + 6.0f, panelRect.getRight() - 6.0f);
     g.setColour (pal::goldDark.withAlpha (0.5f));
     g.drawRoundedRectangle (panelRect.reduced (3.0f), 4.0f, 0.6f);
+
+    if (! txRowRect.isEmpty())
+    {
+        const float y = txRowRect.getY() - 5.0f;
+        g.setColour (juce::Colours::black.withAlpha (pal::lightScreen ? 0.2f : 0.6f));
+        g.fillRect (panelRect.getX() + 12.0f, y, panelRect.getWidth() - 24.0f, 1.0f);
+        g.setColour (pal::goldDark.withAlpha (0.45f));
+        g.fillRect (panelRect.getX() + 12.0f, y + 1.0f, panelRect.getWidth() - 24.0f, 1.0f);
+    }
 
     paintBrand (g);
 
@@ -583,7 +733,7 @@ void TokenEditor::paintBrand (juce::Graphics& g)
     auto goldText = [&g] (const juce::String& text, juce::Rectangle<float> area, float height, juce::Justification just)
     {
         g.setFont (ui::font (height, true, 0.32f));
-        g.setColour (juce::Colours::black.withAlpha (0.65f));
+        g.setColour (juce::Colours::black.withAlpha (pal::lightScreen ? 0.2f : 0.65f));
         g.drawText (text, area.translated (0.0f, 1.5f), just, false);
         juce::ColourGradient grad (pal::goldBright, 0.0f, area.getCentreY() - height * 0.5f,
                                    pal::goldDark, 0.0f, area.getCentreY() + height * 0.5f, false);
@@ -598,7 +748,7 @@ void TokenEditor::paintBrand (juce::Graphics& g)
         ui::engrave (g, "SMSW", r.removeFromTop (th * 0.6f), th * 0.36f, pal::cyan.withAlpha (0.6f), juce::Justification::centredLeft, true);
         goldText ("TOKEN", r.removeFromTop (th * 1.2f), th, juce::Justification::centredLeft);
         ui::engrave (g, "THE LIVING OSCILLOSCOPE", r.removeFromTop (13.0f), 8.5f, pal::gold.withAlpha (0.55f), juce::Justification::centredLeft);
-        ui::engrave (g, "MODEL T-1   /   V1.0", r.removeFromTop (13.0f), 7.5f, pal::gold.withAlpha (0.3f), juce::Justification::centredLeft);
+        ui::engrave (g, "MODEL T-1   /   V1.1", r.removeFromTop (13.0f), 7.5f, pal::gold.withAlpha (0.3f), juce::Justification::centredLeft);
     }
     else
     {

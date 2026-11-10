@@ -39,6 +39,28 @@ void TokenAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     for (int ch = numIn; ch < numOut; ++ch)
         buffer.clear (ch, 0, numSamples);
 
+    // Transport for tempo-synced image changes (only atomics - real-time safe)
+    if (auto* playHead = getPlayHead())
+    {
+        if (auto position = playHead->getPosition())
+        {
+            if (auto bpm = position->getBpm())
+                hostBpm.store (*bpm);
+
+            if (auto ppq = position->getPpqPosition())
+            {
+                hostPpq.store (*ppq);
+                hostPpqTime.store (juce::Time::getMillisecondCounterHiRes() * 0.001);
+            }
+
+            if (auto sig = position->getTimeSignature())
+                if (sig->denominator > 0)
+                    hostBeatsPerBar.store (juce::jmax (1.0, (double) sig->numerator * 4.0 / (double) sig->denominator));
+
+            hostPlaying.store (position->getIsPlaying());
+        }
+    }
+
     if (numIn > 0 && numSamples > 0)
     {
         const float* l = buffer.getReadPointer (0);

@@ -19,7 +19,7 @@ namespace
                                                    juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
         }
 
-        g.setColour (c.interpolatedWith (juce::Colours::white, juce::jlimit (0.0f, 1.0f, 0.5f + 0.3f * kick)).withAlpha (0.95f));
+        g.setColour (c.interpolatedWith (pal::core, juce::jlimit (0.0f, 1.0f, 0.5f + 0.3f * kick)).withAlpha (0.95f));
         g.strokePath (p, juce::PathStrokeType ((1.1f + 0.7f * kick) * juce::jmax (0.8f, scale),
                                                juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
@@ -254,6 +254,32 @@ float Oscilloscope::sampleColumn (const std::vector<float>& v, float x) const no
     return v[(size_t) i0] + (v[(size_t) i1] - v[(size_t) i0]) * fr;
 }
 
+juce::Path Oscilloscope::signalBand (float margin) const
+{
+    juce::Path band;
+    if (cols < 2 || (int) smoothEnv.size() < cols)
+        return band;
+
+    const auto lane = laneGeometry (0);
+    const float dx = area.getWidth() / (float) (cols - 1);
+    const int step = juce::jmax (1, cols / 120);
+
+    for (int c = 0; c < cols; c += step)
+    {
+        const float y = lane.centre - smoothEnv[(size_t) c] * lane.half - margin;
+        if (c == 0) band.startNewSubPath (area.getX(), y);
+        else        band.lineTo (area.getX() + (float) c * dx, y);
+    }
+    band.lineTo (area.getRight(), lane.centre - smoothEnv[(size_t) (cols - 1)] * lane.half - margin);
+
+    for (int c = cols - 1; c >= 0; c -= step)
+        band.lineTo (area.getX() + (float) c * dx, lane.centre + smoothEnv[(size_t) c] * lane.half + margin);
+    band.lineTo (area.getX(), lane.centre + smoothEnv[0] * lane.half + margin);
+    band.closeSubPath();
+
+    return band.createPathWithRoundedCorners (margin * 0.8f);
+}
+
 float Oscilloscope::waveYAt (float x) const noexcept
 {
     const auto lane = laneGeometry (0);
@@ -270,7 +296,7 @@ juce::Colour Oscilloscope::lineColour (const AudioFeatures& f) const
 {
     const auto dream = pal::turquoise.interpolatedWith (pal::moon, 0.25f);
     const auto pulse = pal::cyan;
-    const auto chaos = pal::cyan.interpolatedWith (juce::Colours::white, 0.12f);
+    const auto chaos = pal::cyan.interpolatedWith (pal::core, 0.12f);
     return pal::mix3 (f.stateWeights, dream, pulse, chaos);
 }
 

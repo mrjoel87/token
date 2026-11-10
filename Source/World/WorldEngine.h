@@ -24,6 +24,7 @@ public:
     void drawParticles (juce::Graphics&) const;
 
     const std::array<float, 3>& getTheme() const noexcept { return theme; }
+    ParticleSystem& getParticles() noexcept { return particles; }
 
 private:
     struct Star  { float x, y, size, phase, depth, flashy; };

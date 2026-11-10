@@ -23,6 +23,9 @@ struct AudioFeatures
     float intensity = 0.0f, energyDelta = 0.0f;
     float silence = 1.0f;                                // 1 when nothing is playing
     float scopeGain = 1.0f;                              // automatic visual gain
+    float loudness = 0.0f;                               // 0..1 from RMS dB
+    float centroid = 0.5f;                               // 0..1 spectral brightness (log 100 Hz .. 8 kHz)
+    float spectralMotion = 0.0f;                         // how fast the brightness is changing
 
     EnergyState state = EnergyState::Dream;
     EnergyState previousState = EnergyState::Dream;

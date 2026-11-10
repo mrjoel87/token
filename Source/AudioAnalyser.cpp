@@ -137,6 +137,24 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
             f.spectrum[(size_t) b] = smoothTo (f.spectrum[(size_t) b], level01 (mx, -72.0f, -6.0f), dt, 0.01f, 0.22f);
         }
 
+        // spectral centroid (brightness) and its movement
+        double weighted = 0.0, magSum = 0.0;
+        for (int k = 1; k <= lastBin; ++k)
+        {
+            const double m = (double) fftData[(size_t) k];
+            weighted += m * (double) k * (double) binHz;
+            magSum += m;
+        }
+
+        if (magSum > 1.0e-6)
+        {
+            const float hz = (float) (weighted / magSum);
+            const float c01 = juce::jlimit (0.0f, 1.0f, std::log2 (juce::jmax (1.0f, hz / 100.0f)) / std::log2 (80.0f));
+            const float prev = f.centroid;
+            f.centroid = smoothTo (f.centroid, c01, dt, 0.25f);
+            f.spectralMotion = smoothTo (f.spectralMotion, juce::jlimit (0.0f, 1.0f, std::abs (f.centroid - prev) / dt * 2.0f), dt, 0.4f);
+        }
+
         for (int k = 0; k <= lastBin; ++k)
             prevMag[(size_t) k] = fftData[(size_t) k] * norm;
     }
@@ -170,6 +188,7 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
 
     // ---------------------------------------------------------------- intensity / sustain
     const float loud = juce::jlimit (0.0f, 1.0f, (f.rmsDb + 50.0f) / 42.0f);
+    f.loudness = loud;
 
     if (f.rmsDb > -80.0f)
         longTermDb = smoothTo (longTermDb, f.rmsDb, dt, 12.0f);

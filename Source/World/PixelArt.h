@@ -13,6 +13,9 @@ namespace token::pixel
     /** Multi-pass luminous stroke used for runes, glyphs and outlines. */
     void drawGlowPath (juce::Graphics&, const juce::Path&, juce::Colour, float intensity, float thickness);
 
+    /** Polyline glyph from "x,y x,y|x,y ..." in percent of a unit box (0..1). */
+    juce::Path unitPath (const char* spec);
+
     // ---- Elder Futhark (historical runes only - no modern fantasy symbols)
     int numRunes() noexcept;
     int findRune (const char* name) noexcept;

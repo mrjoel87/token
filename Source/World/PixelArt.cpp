@@ -1,4 +1,5 @@
 #include "PixelArt.h"
+#include "../Palette.h"
 #include <cstring>
 #include <vector>
 
@@ -59,7 +60,7 @@ void drawGlowPath (juce::Graphics& g, const juce::Path& p, juce::Colour c, float
         g.strokePath (p, juce::PathStrokeType (thickness * widths[i], juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
     }
 
-    g.setColour (c.interpolatedWith (juce::Colours::white, 0.5f).withAlpha (juce::jlimit (0.0f, 1.0f, 0.95f * intensity)));
+    g.setColour (c.interpolatedWith (pal::core, 0.5f).withAlpha (juce::jlimit (0.0f, 1.0f, 0.95f * intensity)));
     g.strokePath (p, juce::PathStrokeType (thickness, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 }
 
@@ -135,6 +136,11 @@ namespace
         }();
         return paths;
     }
+}
+
+juce::Path unitPath (const char* spec)
+{
+    return parseUnitPath (spec);
 }
 
 int numRunes() noexcept { return runeCount; }

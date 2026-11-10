@@ -33,7 +33,7 @@ void SegmentSelector::paint (juce::Graphics& g)
     const float textH = juce::jlimit (7.0f, 11.0f, b.getHeight() * 0.56f);
 
     // recess
-    g.setColour (juce::Colour (0xff0a0b0e));
+    g.setColour (pal::lightScreen ? juce::Colour (0xffc4c5c1) : juce::Colour (0xff0a0b0e));
     g.fillRoundedRectangle (b, 3.0f);
     g.setColour (juce::Colours::black.withAlpha (0.8f));
     g.drawRoundedRectangle (b, 3.0f, 1.0f);
@@ -62,7 +62,7 @@ void SegmentSelector::paint (juce::Graphics& g)
         }
 
         g.setFont (ui::font (textH, isSel, 0.12f));
-        const auto colour = isSel ? pal::cyan.interpolatedWith (juce::Colours::white, 0.3f)
+        const auto colour = isSel ? pal::cyan.interpolatedWith (pal::core, 0.3f)
                                   : pal::gold.withAlpha (i == hover ? 0.85f : 0.45f);
         g.setColour (colour);
         g.drawText (labels[i], r, juce::Justification::centred, false);
@@ -112,7 +112,7 @@ void LedToggle::paint (juce::Graphics& g)
     {
         g.setColour (pal::cyan.withAlpha (0.25f));
         g.fillEllipse (led.expanded (d * 0.6f));
-        g.setColour (pal::cyan.interpolatedWith (juce::Colours::white, 0.35f));
+        g.setColour (pal::cyan.interpolatedWith (pal::core, 0.35f));
     }
     else
     {

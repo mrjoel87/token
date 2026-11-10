@@ -110,6 +110,36 @@ dust, snow, sand, chaos embers, sparkles riding the wave, kick shockwaves, a slo
 
 For repeatable debugging, enable `TOKEN_DEBUG_SEED` in `CMakeLists.txt`.
 
+## Hidden Transmission (V1.1)
+
+118 procedural scenes in five categories, picked from the music and composited *inside* the
+signal: faint over the whole screen, strongly revealed within the waveform's envelope, torn by
+analogue interference, materialising row by row and dissolving into particles.
+
+| Category | Scenes |
+|---|---|
+| LOST (30) | sunken city, drowned temple, mountains in fog, ruins in the forest, lost staircases, doors in desert / sea / forest, pyramids, stone circle, runestones, torii, pagodas, a buried face, sea and star charts, ziggurat, floating island, obelisks, longhouse, lighthouse |
+| OCCULT (30) | faces and figures in static, alchemical elements and planetary metals, Maier's squared circle, invented sigils (labelled as invented), Futhark and Ogham, sacred geometry, eyes, a fictional number transmission, Orion / the Plough / Cassiopeia, orrery, manuscript pages, astrolabe |
+| HUMAN (22) | couples and lone figures on lanes, benches, beaches, stations, under streetlights and umbrellas, a window in the rain, tiny walkers in vast landscapes, trains into fog, one lit window, stargazing |
+| NATURE (18) | flocks, geese, storm clouds, lightning, rain and mist, forests, moonlight on water, underwater currents, jellyfish, snow on peaks, night flight, aurora, waves, fog, fireflies |
+| ROADS (18) | night motorway (dry, wet, convoy), lights overhead, forest road, tunnels, 3 AM street, neon rain, aerial cities, telephone poles, railway, road into darkness, bridge lights, level crossing, petrol station |
+
+**Selection.** The engine tracks five musical profiles (ambient, rhythmic, sparse, dark, intense)
+from loudness, onset rate, bass vs. highs, spectral brightness and its movement. Each scene has an
+affinity to each profile; choice is weighted-random, never repeats recently shown scenes, and is
+nudged by MYSTERY (more occult imagery, more interference, rarer scenes).
+
+**Timing.** SYNC: FREE (time-based, uses SPEED) · AUTO (2/4/8 bars depending on energy, scaled by
+SPEED) · 1/4 · 1/2 · 1 · 2 · 4 · 8 · 16 bars, locked to Ableton's transport. When Live is stopped it
+falls back to free timing. Roads, poles, tunnel rings and lamps move with the beat.
+
+**Controls (Box mode, second row).** Category LEDs (ALL overrides the rest) · DENSITY · MYSTERY ·
+VISIBLE (0 = transmissions off) · SYNC · SPEED · THEME (DARK, LIGHT, TEAL, GOLD = original) ·
+RARE APPARITIONS (brief occult glimpses inside the signal). All are also automatable from Live.
+
+To add a scene: write a drawing function in `Source/Transmission/Scenes*.cpp` and add one line to
+that file's list.
+
 ## Next stages
 
 - **Stage 4:** more runes and monuments, Japanese imagery (torii, lanterns, pink moon temple, koi),

@@ -35,6 +35,9 @@ public:
     /** Smoothed upper envelope (screen y) near screen x - the "peaks" of the landscape. */
     float envelopeTopAt (float x) const noexcept;
 
+    /** Closed region hugging the signal's envelope (plus a margin) - the window images are revealed through. */
+    juce::Path signalBand (float margin) const;
+
     float centreY() const noexcept { return laneGeometry (0).centre; }
     juce::Rectangle<float> getArea() const noexcept { return area; }
     juce::Colour lineColour (const AudioFeatures&) const;

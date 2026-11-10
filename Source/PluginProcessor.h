@@ -41,6 +41,13 @@ public:
     ScopeFifo scopeFifo;
     std::atomic<double> currentSampleRate { 44100.0 };
 
+    // Host transport (written on the audio thread, read by the UI for tempo-synced images)
+    std::atomic<double> hostBpm { 120.0 };
+    std::atomic<double> hostPpq { 0.0 };
+    std::atomic<double> hostPpqTime { 0.0 };       // Time::getMillisecondCounterHiRes() * 0.001 when hostPpq was read
+    std::atomic<double> hostBeatsPerBar { 4.0 };   // in quarter notes
+    std::atomic<bool>   hostPlaying { false };
+
     // Remembered editor sizes for each layout (saved with the session).
     std::atomic<int> stripW { defaults::stripW }, stripH { defaults::stripH };
     std::atomic<int> boxW   { defaults::boxW },   boxH   { defaults::boxH };

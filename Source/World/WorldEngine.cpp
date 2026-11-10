@@ -341,8 +341,14 @@ void WorldEngine::drawBackground (juce::Graphics& g, const WorldContext& c) cons
     const auto& f = c.f();
     const float dim = minimal ? 0.45f : 1.0f;
 
-    const auto top = pal::mix3 (theme, skyTop[0], skyTop[1], skyTop[2]).interpolatedWith (pal::black, 1.0f - dim);
-    const auto horizon = pal::mix3 (theme, skyHorizon[0], skyHorizon[1], skyHorizon[2]).interpolatedWith (pal::black, 1.0f - dim);
+    auto top     = pal::themed (pal::mix3 (theme, skyTop[0], skyTop[1], skyTop[2])).interpolatedWith (pal::black, 1.0f - dim);
+    auto horizon = pal::themed (pal::mix3 (theme, skyHorizon[0], skyHorizon[1], skyHorizon[2])).interpolatedWith (pal::black, 1.0f - dim);
+
+    if (pal::lightScreen)
+    {
+        top = pal::skyLightTop;
+        horizon = pal::skyLightHorizon;
+    }
 
     juce::ColourGradient sky (top, 0.0f, s.getY(), pal::black, 0.0f, s.getBottom(), false);
     sky.addColour (0.72, horizon);
@@ -532,7 +538,8 @@ void WorldEngine::drawSkyline (juce::Graphics& g, const WorldContext& c, int k, 
     p.lineTo (s.getRight() + step, s.getBottom());
     p.closeSubPath();
 
-    g.setColour (skylineFill[k].withAlpha (weight));
+    const auto fill = pal::lightScreen ? juce::Colour (0xff8e908f) : pal::themed (skylineFill[k]);
+    g.setColour (fill.withAlpha (weight));
     g.fillPath (p);
 
     if (k == 2)

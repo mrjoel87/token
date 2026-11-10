@@ -52,7 +52,14 @@ target_sources(TOKEN PRIVATE
     Source/World/Particles.cpp
     Source/World/PixelArt.cpp
     Source/World/Events.cpp
-    Source/World/WorldEngine.cpp)
+    Source/World/WorldEngine.cpp
+    Source/Transmission/SceneKit.cpp
+    Source/Transmission/ScenesLost.cpp
+    Source/Transmission/ScenesOccult.cpp
+    Source/Transmission/ScenesHuman.cpp
+    Source/Transmission/ScenesNature.cpp
+    Source/Transmission/ScenesRoads.cpp
+    Source/Transmission/TransmissionEngine.cpp)
 
 target_include_directories(TOKEN PRIVATE Source)
 
