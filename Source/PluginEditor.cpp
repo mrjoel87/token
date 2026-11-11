@@ -6,81 +6,79 @@ namespace token
 {
 namespace
 {
-    juce::Image makeGrainTexture()
-    {
-        juce::Image img (juce::Image::ARGB, 256, 256, true, juce::SoftwareImageType());
-        juce::Random r (7);
-        {
-            juce::Image::BitmapData data (img, juce::Image::BitmapData::writeOnly);
-            for (int y = 0; y < img.getHeight(); ++y)
-                for (int x = 0; x < img.getWidth(); ++x)
-                    data.setPixelColour (x, y, (r.nextBool() ? juce::Colours::white : juce::Colours::black)
-                                                   .withAlpha (r.nextFloat() * 0.6f));
-        }
-        return juce::NativeImageType().convert (img);
-    }
-
     bool isOn (const std::atomic<float>* p) { return p != nullptr && p->load() > 0.5f; }
 
-    const char* visualName (VisualMode m)
+    int choiceOf (const std::atomic<float>* p, int maxIndex)
     {
-        switch (m)
-        {
-            case VisualMode::Classic: return "CLASSIC";
-            case VisualMode::Orbit:   return "ORBIT";
-            case VisualMode::Mirror:  return "MIRROR";
-            case VisualMode::None:    return "SPECTRUM";
-        }
-        return "";
+        return p == nullptr ? 0 : juce::jlimit (0, maxIndex, juce::roundToInt (p->load()));
     }
+
+    const char* sceneName (int i)
+    {
+        switch (i)
+        {
+            case 0:  return "SACRED";
+            case 1:  return "DREAM";
+            default: return "SIGNAL";
+        }
+    }
+
+    const char* paletteName (int i)
+    {
+        switch (i)
+        {
+            case 0:  return "ABYSS";
+            case 1:  return "ULTRAVIOLET";
+            case 2:  return "AMBER";
+            case 3:  return "IVORY";
+            default: return "PULSE";
+        }
+    }
+
+    constexpr float screenCorner = 10.0f;
 }
 
 // =================================================================================================
 TokenEditor::TokenEditor (TokenAudioProcessor& p)
     : AudioProcessorEditor (&p),
       proc (p),
-      visualSelector (*p.apvts.getParameter (ids::visual), { "CLASSIC", "ORBIT", "MIRROR", "NONE" }),
-      colourSelector (*p.apvts.getParameter (ids::colour), { "MANUAL", "BEAT COLOUR" }),
-      themeSelector  (*p.apvts.getParameter (ids::theme),  { "DARK", "LIGHT" }),
-      layoutSelector (*p.apvts.getParameter (ids::mode),   { "STRIP", "LARGE" }),
-      cleanToggle    (*p.apvts.getParameter (ids::clean),  "CLEAN"),
-      displaySelector (*p.apvts.getParameter (ids::artMode), { "SCOPE+ART", "ART", "SCOPE" }),
-      lockToggle     (*p.apvts.getParameter (ids::lock),   "LOCK")
+      sceneSelector  (*p.apvts.getParameter (ids::world),   { "SACRED", "DREAM", "SIGNAL" }),
+      colourSelector (*p.apvts.getParameter (ids::palette), { "ABYSS", "UV", "AMBER", "IVORY", "PULSE" }),
+      layoutSelector (*p.apvts.getParameter (ids::mode),    { "STRIP", "BOX" }),
+      lockToggle     (*p.apvts.getParameter (ids::lock),      "LOCK"),
+      alignToggle    (*p.apvts.getParameter (ids::alignment), "ALIGN"),
+      cleanToggle    (*p.apvts.getParameter (ids::clean),     "CLEAN")
 {
-    pArt       = p.apvts.getRawParameterValue (ids::artMode);
-    pSpeed     = p.apvts.getRawParameterValue (ids::speed);
-    pLock      = p.apvts.getRawParameterValue (ids::lock);
-    pMode      = p.apvts.getRawParameterValue (ids::mode);
-    pVisual    = p.apvts.getRawParameterValue (ids::visual);
-    pTheme     = p.apvts.getRawParameterValue (ids::theme);
-    pColour    = p.apvts.getRawParameterValue (ids::colour);
-    pIntensity = p.apvts.getRawParameterValue (ids::intensity);
-    pClean     = p.apvts.getRawParameterValue (ids::clean);
+    pMode    = p.apvts.getRawParameterValue (ids::mode);
+    pClean   = p.apvts.getRawParameterValue (ids::clean);
+    pWorld   = p.apvts.getRawParameterValue (ids::world);
+    pPalette = p.apvts.getRawParameterValue (ids::palette);
+    pReact   = p.apvts.getRawParameterValue (ids::react);
+    pSpeed   = p.apvts.getRawParameterValue (ids::speed);
+    pLock    = p.apvts.getRawParameterValue (ids::lock);
+    pAlign   = p.apvts.getRawParameterValue (ids::alignment);
 
-    look::setActive (lightTheme());
+    look::setActive (false);   // TOTEM 2.0 is a dark instrument
     setLookAndFeel (&lookAndFeel);
     setOpaque (true);
 
-    intensitySlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    intensitySlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
-    intensitySlider.setMouseCursor (juce::MouseCursor::PointingHandCursor);
-    intensityAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::intensity, intensitySlider);
-    intensitySlider.setDoubleClickReturnValue (true, defaults::intensity);
-
-    speedSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    speedSlider.setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
-    speedSlider.setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    for (auto* s : { &reactSlider, &speedSlider })
+    {
+        s->setSliderStyle (juce::Slider::LinearHorizontal);
+        s->setTextBoxStyle (juce::Slider::NoTextBox, false, 0, 0);
+        s->setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    }
+    reactAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::react, reactSlider);
     speedAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (p.apvts, ids::speed, speedSlider);
+    reactSlider.setDoubleClickReturnValue (true, defaults::react);
     speedSlider.setDoubleClickReturnValue (true, defaults::speed);
 
-    for (auto* c : std::initializer_list<juce::Component*> { &visualSelector, &colourSelector, &themeSelector,
-                                                             &layoutSelector, &cleanToggle, &intensitySlider, &displaySelector,
-                                                             &lockToggle, &speedSlider })
+    for (auto* c : std::initializer_list<juce::Component*> { &sceneSelector, &colourSelector, &layoutSelector, &lockToggle,
+                                                             &alignToggle, &cleanToggle, &reactSlider, &speedSlider })
         addAndMakeVisible (c);
 
     pullLeft.resize ((size_t) ScopeFifo::capacity);
     pullRight.resize ((size_t) ScopeFifo::capacity);
-    grainTexture = makeGrainTexture();
 
     clean = isOn (pClean);
     applyingMode = true;
@@ -95,11 +93,6 @@ TokenEditor::~TokenEditor()
 {
     vblank.reset();
     setLookAndFeel (nullptr);
-}
-
-bool TokenEditor::lightTheme() const
-{
-    return pTheme != nullptr && pTheme->load() > 0.5f;
 }
 
 // =================================================================================================
@@ -125,13 +118,13 @@ void TokenEditor::applyMode (DisplayMode newMode, bool force)
     applyingMode = false;
     updateVisibility();
     resized();
+    repaint();
 }
 
 void TokenEditor::updateVisibility()
 {
-    for (auto* c : std::initializer_list<juce::Component*> { &visualSelector, &colourSelector, &themeSelector,
-                                                             &layoutSelector, &intensitySlider, &displaySelector,
-                                                             &lockToggle, &speedSlider })
+    for (auto* c : std::initializer_list<juce::Component*> { &sceneSelector, &colourSelector, &layoutSelector, &lockToggle,
+                                                             &alignToggle, &reactSlider, &speedSlider })
         c->setVisible (! clean);
 
     cleanToggle.setVisible (true);
@@ -151,6 +144,9 @@ void TokenEditor::resized()
     if (clean)                           layoutClean();
     else if (mode == DisplayMode::Strip) layoutStrip();
     else                                 layoutBox();
+
+    rebuildScreenCache();
+    repaint();
 }
 
 void TokenEditor::placeRow (juce::Rectangle<float> row, std::initializer_list<std::pair<juce::Component*, const char*>> items,
@@ -177,7 +173,7 @@ void TokenEditor::placeRow (juce::Rectangle<float> row, std::initializer_list<st
         else
         {
             if (item.second != nullptr)
-                captions.push_back ({ item.second, cell.removeFromLeft (juce::jmin (62.0f, cell.getWidth() * 0.4f)) });
+                captions.push_back ({ item.second, cell.removeFromLeft (juce::jmin (50.0f, cell.getWidth() * 0.35f)) });
             item.first->setBounds (cell.toNearestInt());
         }
     }
@@ -193,17 +189,17 @@ void TokenEditor::layoutBox()
     screenRect = b.withTrimmedTop (m).withTrimmedLeft (m).withTrimmedRight (m).withTrimmedBottom (2.0f);
 
     auto inner = barRect.reduced (m + 4.0f, 8.0f);
-    brandRect = inner.removeFromLeft (juce::jlimit (100.0f, 190.0f, inner.getWidth() * 0.18f));
+    brandRect = inner.removeFromLeft (juce::jlimit (100.0f, 170.0f, inner.getWidth() * 0.16f));
     inner.removeFromLeft (12.0f);
 
     auto row1 = inner.removeFromTop (inner.getHeight() * 0.5f);
     auto row2 = inner;
 
-    placeRow (row1, { { &displaySelector, "DISPLAY" }, { &visualSelector, "VISUAL" }, { &colourSelector, "COLOUR" }, { &themeSelector, "THEME" } },
-              { 3.2f, 4.3f, 2.8f, 2.0f }, true);
-    placeRow (row2, { { &intensitySlider, "INTENSITY" }, { &speedSlider, "SPEED" }, { &lockToggle, "SCENE" },
-                      { &layoutSelector, "LAYOUT" }, { &cleanToggle, "VIEW" } },
-              { 3.0f, 3.0f, 1.3f, 2.0f, 1.3f }, true);
+    placeRow (row1, { { &sceneSelector, "SCENE" }, { &colourSelector, "COLOUR" }, { &layoutSelector, "LAYOUT" } },
+              { 3.4f, 4.6f, 2.0f }, true);
+    placeRow (row2, { { &reactSlider, "REACT" }, { &speedSlider, "SPEED" }, { &lockToggle, "HOLD" },
+                      { &alignToggle, "MOMENTS" }, { &cleanToggle, "VIEW" } },
+              { 3.0f, 3.0f, 1.2f, 1.2f, 1.2f }, true);
 }
 
 void TokenEditor::layoutStrip()
@@ -211,17 +207,18 @@ void TokenEditor::layoutStrip()
     auto b = getLocalBounds().toFloat();
     const float m = 10.0f;
 
-    // shallow windows get a wider two-column panel so nothing is squeezed or clipped
-    const bool twoColumns = b.getHeight() < 175.0f;
+    // a real strip layout: the screen keeps the full height, controls sit in a side panel that
+    // switches to two columns when the window is shallow - nothing is cropped or stretched
+    const bool twoColumns = b.getHeight() < 180.0f;
     const float panelW = twoColumns ? juce::jlimit (330.0f, 460.0f, b.getWidth() * 0.4f)
-                                    : juce::jlimit (210.0f, 300.0f, b.getWidth() * 0.27f);
+                                    : juce::jlimit (220.0f, 310.0f, b.getWidth() * 0.27f);
     barRect = b.removeFromRight (panelW);
     screenRect = b.reduced (m).withTrimmedRight (-4.0f);
 
     auto inner = barRect.reduced (10.0f, 8.0f);
     const float gap = 4.0f;
 
-    if (! twoColumns && inner.getHeight() >= 6.0f * 16.0f + 5.0f * gap + 22.0f)
+    if (! twoColumns && inner.getHeight() >= 5.0f * 16.0f + 4.0f * gap + 24.0f)
     {
         brandRect = inner.removeFromTop (20.0f);
         inner.removeFromTop (4.0f);
@@ -243,26 +240,29 @@ void TokenEditor::layoutStrip()
         return out;
     };
 
-    std::vector<juce::Rectangle<float>> r;
     if (twoColumns)
     {
         auto left = inner.removeFromLeft (inner.getWidth() * 0.5f - 4.0f);
         inner.removeFromLeft (8.0f);
         const auto a = layoutColumn (left, 3);
         const auto c = layoutColumn (inner, 3);
-        r = { a[0], a[1], a[2], c[0], c[1], c[2] };
+        sceneSelector.setBounds (a[0].toNearestInt());
+        colourSelector.setBounds (a[1].toNearestInt());
+        placeRow (a[2], { { &layoutSelector, nullptr }, { &cleanToggle, nullptr } }, { 1.6f, 1.0f }, false);
+        placeRow (c[0], { { &reactSlider, "REACT" } }, { 1.0f }, false);
+        placeRow (c[1], { { &speedSlider, "SPEED" } }, { 1.0f }, false);
+        placeRow (c[2], { { &lockToggle, nullptr }, { &alignToggle, nullptr } }, { 1.0f, 1.0f }, false);
     }
     else
     {
-        r = layoutColumn (inner, 6);
+        const auto r = layoutColumn (inner, 5);
+        sceneSelector.setBounds (r[0].toNearestInt());
+        colourSelector.setBounds (r[1].toNearestInt());
+        placeRow (r[2], { { &reactSlider, "REACT" } }, { 1.0f }, false);
+        placeRow (r[3], { { &speedSlider, "SPEED" } }, { 1.0f }, false);
+        placeRow (r[4], { { &layoutSelector, nullptr }, { &lockToggle, nullptr }, { &alignToggle, nullptr }, { &cleanToggle, nullptr } },
+                  { 1.5f, 1.0f, 1.0f, 1.0f }, false);
     }
-
-    displaySelector.setBounds (r[0].toNearestInt());
-    visualSelector.setBounds (r[1].toNearestInt());
-    placeRow (r[2], { { &colourSelector, nullptr }, { &themeSelector, nullptr } }, { 1.4f, 1.0f }, false);
-    placeRow (r[3], { { &intensitySlider, "INTENSITY" } }, { 1.0f }, false);
-    placeRow (r[4], { { &speedSlider, "SPEED" } }, { 1.0f }, false);
-    placeRow (r[5], { { &layoutSelector, nullptr }, { &lockToggle, nullptr }, { &cleanToggle, nullptr } }, { 1.6f, 1.0f, 1.0f }, false);
 }
 
 void TokenEditor::layoutClean()
@@ -274,19 +274,38 @@ void TokenEditor::layoutClean()
 
 juce::Rectangle<float> TokenEditor::visualArea() const
 {
-    const auto s = screenRect;
-    if (mode == DisplayMode::Strip)
-        return s.reduced (s.getWidth() * 0.015f, s.getHeight() * 0.1f);
-    return s.reduced (s.getWidth() * 0.03f, s.getHeight() * 0.1f);
+    auto s = screenRect.reduced (screenRect.getWidth() * (mode == DisplayMode::Strip ? 0.012f : 0.025f),
+                                 screenRect.getHeight() * 0.06f);
+    if (! clean)
+        s.removeFromTop (juce::jmin (14.0f, s.getHeight() * 0.08f));   // room for the status line
+    return s;
 }
 
-juce::Rectangle<float> TokenEditor::artCanvas() const
+void TokenEditor::rebuildScreenCache()
 {
-    // a safe canvas inside the screen: clear of the edges and of the small readout at the top
-    auto s = screenRect.reduced (screenRect.getWidth() * 0.02f, screenRect.getHeight() * 0.05f);
-    if (! clean)
-        s.removeFromTop (juce::jmin (16.0f, s.getHeight() * 0.1f));
-    return s;
+    const auto s = screenRect;
+    const float corner = clean ? 4.0f : screenCorner;
+
+    // corner masks: the screen is clipped with a cheap rectangle, the rounded corners are
+    // painted over in the chassis colour
+    screenCorners.clear();
+    screenCorners.setUsingNonZeroWinding (false);
+    screenCorners.addRectangle (s);
+    screenCorners.addRoundedRectangle (s, corner);
+
+    // vignette: rendered once per size instead of a full-screen gradient every frame
+    const int w = juce::jmax (1, (int) s.getWidth()), h = juce::jmax (1, (int) s.getHeight());
+    vignette = juce::Image (juce::Image::ARGB, w, h, true);
+    {
+        juce::Graphics vg (vignette);
+        const juce::Point<float> c ((float) w * 0.5f, (float) h * 0.5f);
+        juce::ColourGradient grad (juce::Colours::transparentBlack, c.x, c.y,
+                                   juce::Colours::black.withAlpha (0.5f), c.x + (float) w * 0.62f, c.y, true);
+        juce::FillType ft (grad);
+        ft.transform = juce::AffineTransform::scale (1.0f, (float) h / (float) w * 1.3f, c.x, c.y);
+        vg.setFillType (ft);
+        vg.fillAll();
+    }
 }
 
 void TokenEditor::mouseDoubleClick (const juce::MouseEvent&)
@@ -316,6 +335,33 @@ Transport TokenEditor::readTransport (double now) const
     return t;
 }
 
+void TokenEditor::adaptQuality (double paintMs)
+{
+    // graceful degradation: if drawing gets expensive, step quality down quickly;
+    // step back up only after several seconds of comfortable frames
+    paintAvgMs += (paintMs - paintAvgMs) * 0.1;
+
+    if (paintAvgMs > 7.0 && quality > 0)
+    {
+        --quality;
+        paintAvgMs = 3.0;
+        goodTime = 0.0;
+    }
+    else if (paintAvgMs < 2.5 && quality < 2)
+    {
+        goodTime += 1.0 / 60.0;
+        if (goodTime > 5.0)
+        {
+            ++quality;
+            goodTime = 0.0;
+        }
+    }
+    else
+    {
+        goodTime = 0.0;
+    }
+}
+
 void TokenEditor::frame()
 {
     const double now = juce::Time::getMillisecondCounterHiRes() * 0.001;
@@ -336,7 +382,7 @@ void TokenEditor::frame()
     if (newMode != mode)
         applyMode (newMode, false);
 
-    // audio from the processor (lock-free FIFO)
+    // audio from the processor (lock-free FIFO; the audio thread only copies samples)
     const int n = proc.scopeFifo.pull (pullLeft.data(), pullRight.data(), (int) pullLeft.size());
     if (n > 0)
         history.append (pullLeft.data(), pullRight.data(), n);
@@ -346,40 +392,34 @@ void TokenEditor::frame()
     const auto& f = analyser.features();
 
     transport = readTransport (now);
-    const bool light = lightTheme();
-    colours.update (dt, f, transport, isOn (pColour), light);
+    const int paletteIndex = choiceOf (pPalette, 4);
+    colours.update (dt, f, transport, paletteIndex);
 
-    visualSettings.mode = (VisualMode) juce::jlimit (0, 3, juce::roundToInt (pVisual->load()));
-    visualSettings.intensity = pIntensity->load();
-    visualSettings.strip = mode == DisplayMode::Strip;
-    visualSettings.speed = speedFactor (pSpeed->load());
-    visualiser.update (history, f, visualSettings, visualArea(), sr, dt, time);
-
-    // artwork: SCOPE + ART / ART ONLY / SCOPE ONLY (the scope fades rather than snapping away)
-    artMode = (ArtMode) juce::jlimit (0, 2, juce::roundToInt (pArt->load()));
-    scopeFade = smoothTo (scopeFade, artMode == ArtMode::ArtOnly ? 0.0f : 1.0f, dt, 0.35f);
-
-    artContext.area = artCanvas();
-    artContext.time = time;
-    artContext.dt = dt;
-    artContext.enabled = artMode != ArtMode::ScopeOnly;
-    artContext.artOnly = artMode == ArtMode::ArtOnly;
-    artContext.strip = mode == DisplayMode::Strip;
-    artContext.locked = isOn (pLock);
-    artContext.intensity = visualSettings.intensity;
-    artContext.speed = visualSettings.speed;
-    artContext.beats = colours.beats();
-    artContext.beatsPerBar = colours.beatsPerBar();
-    artContext.beatPhase = colours.beatPhase();
-    artContext.barPhase = colours.barPhase();
-    artContext.hostPlaying = colours.synced();
-    artContext.audio = &f;
-    artContext.palette = colours.palette();
-    artContext.theme = light ? &look::light() : &look::dark();
-    artEngine.update (artContext);
+    settings.world = (World) choiceOf (pWorld, 2);
+    settings.speed = speedFactor (pSpeed->load());
+    settings.react = pReact->load();
+    settings.locked = isOn (pLock);
+    settings.alignment = isOn (pAlign);
+    settings.strip = mode == DisplayMode::Strip;
+    settings.quality = quality;
+    totem.update (history, f, colours, settings, visualArea(), sr, dt, time);
 
     hasFrame = true;
-    repaint();
+
+    // the controls' accent follows the palette; repaint them only when it actually changes
+    const auto accent = paletteIndex < look::numStudioPalettes ? look::studioPalette (paletteIndex).a
+                                                               : look::studioPalette (juce::jlimit (0, look::numStudioPalettes - 1,
+                                                                                                    (int) std::fmod (std::abs (colours.beats()) / 8.0, 4.0))).a;
+    if (paletteIndex != lastPalette || accent != lastAccent)
+    {
+        lastPalette = paletteIndex;
+        lastAccent = accent;
+        look::setAccent (accent);
+        repaint();
+        return;
+    }
+
+    repaint (screenRect.toNearestInt().expanded (1));
 }
 
 // =================================================================================================
@@ -387,18 +427,20 @@ void TokenEditor::frame()
 // =================================================================================================
 void TokenEditor::paint (juce::Graphics& g)
 {
-    const bool light = lightTheme();
-    look::setActive (light);                     // shared by all TOTEM windows: set before anything paints
-    look::setAccent (colours.palette().a);
+    look::setActive (false);
     const auto& lk = look::active();
-    const auto b = getLocalBounds().toFloat();
 
-    // background
-    juce::ColourGradient bg (lk.chassisTop, 0.0f, 0.0f, lk.chassisBottom, 0.0f, b.getBottom(), false);
-    g.setGradientFill (bg);
-    g.fillRect (b);
+    const auto clip = g.getClipBounds().toFloat();
+    if (! screenRect.contains (clip))
+        paintChrome (g, lk);
 
-    paintScreen (g, lk);
+    if (clip.intersects (screenRect))
+        paintScreen (g, lk);
+}
+
+void TokenEditor::paintChrome (juce::Graphics& g, const look::Look& lk)
+{
+    g.fillAll (lk.chassisBottom);
 
     if (clean)
         return;
@@ -421,144 +463,76 @@ void TokenEditor::paint (juce::Graphics& g)
 void TokenEditor::paintScreen (juce::Graphics& g, const look::Look& lk)
 {
     const auto s = screenRect;
-    const float corner = clean ? 4.0f : 10.0f;
-    const auto& pal = colours.palette();
+    const float corner = clean ? 4.0f : screenCorner;
 
-    juce::Graphics::ScopedSaveState state (g);
-    juce::Path clip;
-    clip.addRoundedRectangle (s, corner);
-    g.reduceClipRegion (clip);
-
-    juce::ColourGradient surface (lk.screenTop, 0.0f, s.getY(), lk.screenBottom, 0.0f, s.getBottom(), false);
-    g.setGradientFill (surface);
-    g.fillRect (s);
-
-    if (! hasFrame)
-        return;
-
-    const auto& f = analyser.features();
-    const auto va = visualArea();
-
-    // everything that belongs to the scope fades together (ART ONLY hides it completely)
-    const bool scopeVisible = scopeFade > 0.01f;
-    const bool fadingScope = scopeVisible && scopeFade < 0.99f;
-
-    // hairline graticule
-    if (scopeVisible)
     {
-        g.setColour (lk.grid.withMultipliedAlpha (scopeFade));
-        if (visualSettings.mode == VisualMode::Orbit || visualSettings.mode == VisualMode::Mirror)
-        {
-            g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
-            g.fillRect (va.getCentreX(), s.getY(), 1.0f, s.getHeight());
-        }
-        else
-        {
-            g.fillRect (s.getX(), va.getCentreY(), s.getWidth(), 1.0f);
-            for (int i = 1; i < 10; ++i)
-                g.fillRect (va.getX() + va.getWidth() * (float) i / 10.0f, s.getY(), 1.0f, s.getHeight());
-        }
-    }
+        juce::Graphics::ScopedSaveState state (g);
+        g.reduceClipRegion (s.toNearestInt());   // rectangle clip only: cheap on every renderer
 
-    // the artwork lives behind the signal. In SCOPE + ART it is a soft ghost everywhere and
-    // shines through brightly wherever the waveform is - the picture seems to live inside the signal.
-    if (artMode == ArtMode::ArtOnly || ! scopeVisible)
-    {
-        artEngine.draw (g, artContext, 1.0f);
-    }
-    else
-    {
-        const auto region = visualiser.revealRegion (juce::jmax (6.0f, s.getHeight() * 0.05f));
-        if (region.isEmpty())
-        {
-            artEngine.draw (g, artContext, 0.8f);
-        }
-        else
-        {
-            artEngine.draw (g, artContext, 0.42f);
-            juce::Graphics::ScopedSaveState revealState (g);
-            g.reduceClipRegion (region);
-            artEngine.draw (g, artContext, 0.9f);
-        }
-    }
-
-    if (scopeVisible)
-    {
-        if (fadingScope)
-            g.beginTransparencyLayer (scopeFade);
-
-        // spectrum: the whole stage when the oscilloscope is hidden, otherwise a quiet floor
-        if (visualSettings.mode == VisualMode::None)
-            visualiser.drawSpectrum (g, f, s.reduced (s.getWidth() * 0.04f, s.getHeight() * 0.14f), lk, pal, true);
-        else
-            visualiser.drawSpectrum (g, f, mode == DisplayMode::Strip ? s.reduced (4.0f, 0.0f)
-                                                                      : s.withTop (s.getBottom() - s.getHeight() * 0.22f).reduced (8.0f, 0.0f),
-                                     lk, pal, false);
-
-        visualiser.draw (g, lk, pal, colours.pulse());
-
-        if (fadingScope)
-            g.endTransparencyLayer();
-    }
-
-    // finishing: fine grain, soft vignette (dark), glass hairline
-    g.setTiledImageFill (grainTexture, fxRandom.nextInt (256), fxRandom.nextInt (256), lk.light ? 0.025f : 0.035f);
-    g.fillRect (s);
-
-    if (! lk.light)
-    {
-        const auto c = s.getCentre();
-        juce::ColourGradient vig (juce::Colours::transparentBlack, c.x, c.y,
-                                  juce::Colours::black.withAlpha (0.45f), c.x + s.getWidth() * 0.62f, c.y, true);
-        juce::FillType vf (vig);
-        vf.transform = juce::AffineTransform::scale (1.0f, s.getHeight() / juce::jmax (1.0f, s.getWidth()) * 1.3f, c.x, c.y);
-        g.setFillType (vf);
+        g.setColour (juce::Colour (0xff030407));
         g.fillRect (s);
+
+        if (hasFrame)
+        {
+            const double t0 = juce::Time::getMillisecondCounterHiRes();
+            totem.draw (g);
+            adaptQuality (juce::Time::getMillisecondCounterHiRes() - t0);
+        }
+
+        if (quality >= 1 && vignette.isValid())
+            g.drawImageAt (vignette, (int) s.getX(), (int) s.getY());
+
+        g.setColour (juce::Colours::white.withAlpha (0.04f));
+        g.fillRect (s.getX() + corner, s.getY() + 1.0f, s.getWidth() - corner * 2.0f, 1.0f);
+
+        paintHud (g, lk);
     }
 
-    g.setColour (juce::Colours::white.withAlpha (lk.light ? 0.5f : 0.05f));
-    g.fillRect (s.getX() + corner, s.getY() + 1.0f, s.getWidth() - corner * 2.0f, 1.0f);
-
-    paintInfo (g, lk);
-
+    g.setColour (lk.chassisBottom);
+    g.fillPath (screenCorners);
     g.setColour (lk.frame);
     g.drawRoundedRectangle (s.reduced (0.5f), corner, 1.0f);
 }
 
-void TokenEditor::paintInfo (juce::Graphics& g, const look::Look& lk)
+void TokenEditor::paintHud (juce::Graphics& g, const look::Look& lk)
 {
-    auto s = screenRect.reduced (14.0f, 10.0f);
+    auto s = screenRect.reduced (14.0f, 9.0f);
 
     if (clean)
     {
         // discreet signature for screen recordings
         auto r = s.withTop (s.getBottom() - 12.0f);
         g.setFont (ui::font (9.0f, "SemiBold", 0.45f));
-        g.setColour (lk.textDim.withAlpha (0.55f));
+        g.setColour (lk.textDim.withAlpha (0.45f));
         g.drawText ("SMSW  TOTEM", r, juce::Justification::centredRight, false);
         return;
     }
 
     auto r = s.removeFromTop (12.0f);
     g.setFont (ui::font (8.5f, "SemiBold", 0.3f));
-    g.setColour (lk.textDim.withAlpha (0.8f));
-    juce::String modeText = artMode == ArtMode::ArtOnly ? juce::String ("ART")
-                          : juce::String (visualName (visualSettings.mode)) + (artMode == ArtMode::ScopeAndArt ? "  +  ART" : "");
-    if (artMode != ArtMode::ScopeOnly && isOn (pLock))
-        modeText += "   /   LOCKED";
-    g.drawText (modeText, r, juce::Justification::centredLeft, false);
 
-    if (isOn (pColour))
+    juce::String status = juce::String (sceneName (choiceOf (pWorld, 2))) + "   /   " + paletteName (choiceOf (pPalette, 4));
+    if (isOn (pLock))
+        status += "   /   HELD";
+    g.setColour (lk.textDim.withAlpha (0.75f));
+    g.drawText (status, r, juce::Justification::centredLeft, false);
+
+    // right: tempo source, honest about whether a beat grid exists
+    const bool synced = colours.beatValid();
+    const juce::String tempo = synced ? juce::String (transport.bpm, 1) + " BPM" : juce::String ("FREE");
+    auto right = r;
+    const auto dot = right.removeFromRight (8.0f).withSizeKeepingCentre (5.0f, 5.0f);
+    const float pulse = synced ? colours.pulse() : analyser.features().kick;
+    g.setColour (colours.palette().a.withAlpha (0.3f + 0.7f * juce::jlimit (0.0f, 1.0f, pulse * 2.0f)));
+    g.fillEllipse (dot);
+    right.removeFromRight (6.0f);
+    g.setColour (lk.textDim.withAlpha (0.75f));
+    g.drawText (tempo, right, juce::Justification::centredRight, false);
+
+    if (totem.alignmentLevel() > 0.02f)
     {
-        const juce::String bpm = juce::String (transport.bpm, 1) + " BPM";
-        const float pulse = colours.pulse();
-        auto right = r;
-        const auto dot = right.removeFromRight (8.0f).withSizeKeepingCentre (5.0f, 5.0f);
-        g.setColour (colours.palette().a.withAlpha (0.35f + 0.65f * juce::jlimit (0.0f, 1.0f, pulse * 2.0f)));
-        g.fillEllipse (dot);
-        right.removeFromRight (6.0f);
-        g.setColour (lk.textDim.withAlpha (0.8f));
-        g.drawText ("BEAT COLOUR   " + bpm, right, juce::Justification::centredRight, false);
+        g.setColour (colours.palette().c.withAlpha (0.8f * totem.alignmentLevel()));
+        g.drawText ("ALIGNMENT", r, juce::Justification::centred, false);
     }
 }
 
@@ -575,7 +549,7 @@ void TokenEditor::paintWordmark (juce::Graphics& g, const look::Look& lk, juce::
         g.drawText ("TOTEM", r, juce::Justification::centredLeft, false);
         g.setFont (ui::font (8.5f, "SemiBold", 0.4f));
         g.setColour (lk.textDim);
-        g.drawText ("SMSW", r, juce::Justification::centredRight, false);
+        g.drawText ("SMSW  2.0", r, juce::Justification::centredRight, false);
         return;
     }
 

@@ -5,28 +5,25 @@
 
 namespace token
 {
-    // Parameter IDs. "mode", "clean" and "theme" keep their original IDs so settings saved in
-    // existing Live Sets still load.
+    // Parameter IDs. "mode", "clean", "intensity" (now REACT), "artspeed" (SPEED) and "lock" keep
+    // their IDs so settings saved in existing Live Sets still load.
     namespace ids
     {
-        inline constexpr const char* mode      = "mode";       // layout: Strip / Box
-        inline constexpr const char* clean     = "clean";      // Clean View
-        inline constexpr const char* theme     = "theme";      // Dark / Light
-        inline constexpr const char* visual    = "visual";     // Classic / Orbit / Mirror / None
-        inline constexpr const char* colour    = "colour";     // Manual / Beat Colour
-        inline constexpr const char* intensity = "intensity";  // strength of the visual reactions
-        inline constexpr const char* artMode   = "artmode";    // Scope + Art / Art Only / Scope Only
-        inline constexpr const char* speed     = "artspeed";   // how fast the visuals move and change
-        inline constexpr const char* lock      = "lock";       // hold the current scene
+        inline constexpr const char* mode      = "mode";        // layout: Strip / Box
+        inline constexpr const char* clean     = "clean";       // Clean View (filming)
+        inline constexpr const char* world     = "world";       // SCENE: Sacred / Dream / Signal
+        inline constexpr const char* speed     = "artspeed";    // SPEED: rate of visual evolution
+        inline constexpr const char* react     = "intensity";   // REACT: strength of audio response
+        inline constexpr const char* palette   = "palette";     // COLOUR
+        inline constexpr const char* lock      = "lock";        // LOCK: freeze the composition
+        inline constexpr const char* alignment = "alignment";   // ALIGNMENT moments on/off
     }
 
     enum class DisplayMode { Strip = 0, Box = 1 };
-    enum class VisualMode  { Classic = 0, Orbit, Mirror, None };
-    enum class ThemeId     { Dark = 0, Light = 1 };
-    enum class ColourMode  { Manual = 0, Beat = 1 };
-    enum class ArtMode     { ScopeAndArt = 0, ArtOnly = 1, ScopeOnly = 2 };
+    enum class World       { Sacred = 0, Dream = 1, Signal = 2 };
+    enum class PaletteId   { Abyss = 0, Ultraviolet, Amber, Ivory, Pulse };
 
-    /** SPEED knob (0..1) -> animation rate multiplier (0.3x .. 2.5x; default ~1.4x). */
+    /** SPEED knob (0..1) -> evolution rate multiplier (0.3x .. 2.5x; default ~1.4x). */
     inline float speedFactor (float knob) noexcept
     {
         return 0.3f + 2.2f * std::pow (juce::jlimit (0.0f, 1.0f, knob), 1.3f);
@@ -34,10 +31,10 @@ namespace token
 
     namespace defaults
     {
-        inline constexpr float intensity = 0.65f;
-        inline constexpr float speed = 0.6f;
+        inline constexpr float react = 0.65f;
+        inline constexpr float speed = 0.5f;
 
-        inline constexpr int stripW = 1000, stripH = 220;
+        inline constexpr int stripW = 1000, stripH = 200;
         inline constexpr int boxW   = 920,  boxH   = 640;
     }
 
@@ -48,20 +45,17 @@ namespace token
 
         layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::mode, 1 }, "Layout",
                                                             StringArray { "Strip", "Box" }, 1));
-        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::visual, 1 }, "Visual Mode",
-                                                            StringArray { "Classic", "Orbit", "Mirror", "None" }, 0));
-        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::theme, 1 }, "Theme",
-                                                            StringArray { "Dark", "Light" }, 0));
-        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::colour, 1 }, "Colour",
-                                                            StringArray { "Manual", "Beat Colour" }, 0));
-        layout.add (std::make_unique<AudioParameterFloat> (ParameterID { ids::intensity, 1 }, "Intensity",
-                                                           NormalisableRange<float> (0.0f, 1.0f), defaults::intensity));
-        layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::clean, 1 }, "Clean View", false));
-        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::artMode, 1 }, "Display",
-                                                            StringArray { "Scope + Art", "Art Only", "Scope Only" }, 0));
+        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::world, 1 }, "Scene",
+                                                            StringArray { "Sacred", "Dream", "Signal" }, 0));
         layout.add (std::make_unique<AudioParameterFloat> (ParameterID { ids::speed, 1 }, "Speed",
                                                            NormalisableRange<float> (0.0f, 1.0f), defaults::speed));
-        layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::lock, 1 }, "Lock Scene", false));
+        layout.add (std::make_unique<AudioParameterFloat> (ParameterID { ids::react, 1 }, "React",
+                                                           NormalisableRange<float> (0.0f, 1.0f), defaults::react));
+        layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ids::palette, 1 }, "Colour",
+                                                            StringArray { "Abyss", "Ultraviolet", "Amber", "Ivory", "Pulse" }, 0));
+        layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::lock, 1 }, "Lock", false));
+        layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::alignment, 1 }, "Alignment", true));
+        layout.add (std::make_unique<AudioParameterBool> (ParameterID { ids::clean, 1 }, "Clean View", false));
 
         return layout;
     }

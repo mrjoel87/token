@@ -64,6 +64,17 @@ const Look& active() noexcept               { return current != nullptr ? *curre
 void setAccent (juce::Colour c) noexcept    { currentAccent = c; }
 juce::Colour accent() noexcept              { return currentAccent; }
 
+const Palette& studioPalette (int index)
+{
+    static const std::array<Palette, numStudioPalettes> set {{
+        { C (0xff9ff2ff), C (0xff2f5bff), C (0xffffb35c) },   // ABYSS: cyan, electric blue, amber
+        { C (0xffd4c4ff), C (0xff7a3cff), C (0xff46eeff) },   // ULTRAVIOLET: lilac, ultraviolet, cyan
+        { C (0xffffd9a0), C (0xffff8a2a), C (0xff9ff2ff) },   // AMBER: warm light, amber, ice
+        { C (0xfff6f2ea), C (0xff8d98b5), C (0xffffb35c) },   // IVORY: soft white, steel, amber
+    }};
+    return set[(size_t) juce::jlimit (0, numStudioPalettes - 1, index)];
+}
+
 Palette manualPalette (bool lightTheme)
 {
     if (lightTheme)

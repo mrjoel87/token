@@ -40,6 +40,10 @@ namespace token::look
     void setAccent (juce::Colour) noexcept;
     juce::Colour accent() noexcept;
 
+    /** TOTEM 2.0 colour palettes: 0 Abyss, 1 Ultraviolet, 2 Amber, 3 Ivory. */
+    const Palette& studioPalette (int index);
+    constexpr int numStudioPalettes = 4;
+
     Palette manualPalette (bool lightTheme);
     const std::array<Palette, 6>& beatPalettes (bool lightTheme);
     Palette mix (const Palette& from, const Palette& to, float t);

@@ -229,6 +229,12 @@ void AudioAnalyser::process (const ScopeHistory& h, int numNew, double sampleRat
         dropCooldown = 8.0f;
     }
 
+    // build-ups: the medium-term energy keeps rising above the long-term energy (with rising highs)
+    glacialIntensity = smoothTo (glacialIntensity, f.intensity, dt, 20.0f);
+    const float climb = juce::jlimit (0.0f, 1.0f, (slowIntensity - glacialIntensity) * 4.0f + juce::jmax (0.0f, f.energyDelta) * 1.5f
+                                                    + 0.2f * f.highRel - 0.6f * f.drop);
+    f.build = smoothTo (f.build, climb, dt, 1.5f, 0.6f);
+
     f.breakdown = smoothTo (f.breakdown, juce::jlimit (0.0f, 1.0f, (slowIntensity - f.intensity) * 3.0f), dt, 0.8f, 2.0f);
 
     // ---------------------------------------------------------------- Dream / Pulse / Chaos (hysteresis + hold)

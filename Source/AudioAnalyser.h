@@ -34,6 +34,7 @@ struct AudioFeatures
     bool hatHit = false;
     float drop = 0.0f;                                   // 1 right after a sudden rise in energy, decays over seconds
     float breakdown = 0.0f;                              // > 0 while energy is falling away from a louder section
+    float build = 0.0f;                                  // > 0 while energy has been climbing for several seconds
 
     EnergyState state = EnergyState::Dream;
     EnergyState previousState = EnergyState::Dream;
@@ -77,6 +78,6 @@ private:
     float onsetEnergy = 0.0f, longTermDb = -40.0f, stateHeld = 0.0f;
     float intensityPrev = 0.0f, peakEnv = 0.05f, noDataTime = 0.0f;
     float bassEnv = 0.3f, midEnv = 0.3f, highEnv = 0.3f;
-    float slowIntensity = 0.0f, dropCooldown = 0.0f;
+    float slowIntensity = 0.0f, dropCooldown = 0.0f, glacialIntensity = 0.0f;
 };
 }
