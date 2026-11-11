@@ -1,124 +1,124 @@
-# SMSW TOTEM
+# SMSW TOTEM 2.0
 
-An audio-reactive visualiser for Windows / Ableton Live (VST3, JUCE 8). The artwork is generated
-entirely by the incoming sound - no images, no pre-made animations. Audio passes through untouched.
+An audio-reactive visualiser for Windows / Ableton Live (VST3, JUCE 8). Every image is generated
+from the incoming sound: the oscilloscope signal is the raw material of all three worlds.
+Audio passes through untouched.
 
-*Formerly TOKEN. The plugin keeps TOKEN's internal identity (manufacturer code `Smsw`, plugin code
-`Tokn`, state tag `TOKEN`) so Live Sets saved with TOKEN still find it - only the visible name changed.*
+*Formerly TOKEN. The plugin keeps its internal identity (manufacturer code `Smsw`, plugin code
+`Tokn`, state tag `TOKEN`) so existing Live Sets still find it.*
 
 ## Controls
 
-| Control | Options |
+| Control | What it does |
 |---|---|
-| **VISUAL** | CLASSIC · ORBIT · MIRROR · NONE |
-| **COLOUR** | MANUAL (fixed palette) · BEAT COLOUR (evolves with the host tempo) |
-| **THEME** | DARK · LIGHT |
-| **INTENSITY** | strength of all visual reactions (double-click to reset) |
-| **LAYOUT** | STRIP (wide, 1000×220) · LARGE (920×640) - both resizable, each remembers its size |
-| **CLEAN** | hides every control for filming; double-click anywhere to toggle. A small "SMSW TOTEM" signature stays in the corner. |
+| **SCENE** | SACRED · DREAM · SIGNAL (cross-fade over 0.6 s; each world keeps its state) |
+| **COLOUR** | ABYSS (cyan / electric blue / amber) · UV (lilac / ultraviolet / cyan) · AMBER · IVORY · PULSE (moves through the palettes with the music) |
+| **REACT** | how strongly the music moves the visuals (double-click to reset) |
+| **SPEED** | how fast the composition evolves, 0.3x to 2.5x (never touches audio or tempo) |
+| **LOCK** | freezes the composition (symmetry, glyphs, ribbon history, DREAM moment). Audio reactions continue. |
+| **ALIGN** | allows the rare ALIGNMENT moments (on by default) |
+| **LAYOUT** | STRIP or BOX; both resizable, each remembers its size |
+| **CLEAN** | hides every control for filming; double-click anywhere to toggle. A small signature stays. |
 
-## Motion, sync and control (latest)
+The status line shows scene / colour / HELD, and on the right either the host BPM (Live playing)
+or FREE (no host beat grid; nothing is beat-synced then, only onset-driven).
 
-- **SPEED** slider: 0.3x to 2.5x animation rate (default about 1.4x, livelier than before). It
-  changes how fast pieces move, how long they stay and how quickly the next one arrives. It never
-  touches the audio or Live's tempo.
-- **LOCK**: keeps the current piece on screen (still animating, still reacting, SPEED still works).
-  No new pieces appear until it is released.
-- **Musical sync**: one shared beat clock (Live's song position; when Live is stopped it runs at
-  the host tempo and re-aligns to detected kicks). Pieces change on bar lines, geometry turns in
-  eased steps on the beat (every half, one, two or four beats depending on SPEED), everything
-  pulses on kicks and swells with the bass, and breakdowns soften and slow the display.
-- **BEAT COLOUR**: a clear pulse on every beat (the accent colour bleeds into the line, stronger
-  on the downbeat), a hue drift through each bar and a new palette every 1, 2 or 4 bars. Applied to
-  the scope, spectrum and artwork.
-- **SCOPE + ART**: the artwork is a soft ghost everywhere and shines through brightly inside the
-  waveform's envelope (Classic), the ring (Orbit) or the kaleidoscope (Mirror).
-- **Composition**: a safe canvas inside the screen; major geometry is centred; other pieces sit
-  on the thirds, never off-canvas, never stretched. In Strip, Orbit and Mirror stay round.
-- **Strip layout**: responsive panel. Shallow windows switch to a two-column panel automatically.
-- **New**: 18 mandala / sacred-geometry pieces (rings, lotus, nine triangles, star polygons,
-  turning squares, rose curves, an eight-armed stave, triquetra, Borromean rings, a spectrum
-  mandala whose shape *is* the music, rings of sound, star tetrahedron, hexagon pulse ...) and the
-  **Night motorway** POV: lane markings every two beats, a lamp post every beat, kicks brighten
-  the road light, SPEED and bass set the pace. Library: 134 pieces.
-- The longship now rides the waveform sea in place, the capstone eye no longer floats and the
-  floating "many eyes" piece was removed.
+## The three worlds
 
-## Artwork (DISPLAY: SCOPE+ART · ART · SCOPE)
+**SACRED**: the waveform folded into k-fold symmetry (8, 6, 12, 7, 10, 5, 9 folds, a new one every
+8 bars with the host or ~24 s without). A bass ring of the low-passed waveform; petals whose edges are
+the waveform (unfolding with sustained sound, veined by hi-hats); a polygon and star frame that steps
+on host beats (or real kicks without a host) and brightens through build-ups; rune spokes whose
+branches are read from the waveform every 4 bars and flash on snares; a core that pulses with kicks
+and blooms on drops. In STRIP it becomes a frieze of counter-rotating rosettes sized to the height.
 
-116 original artwork elements, drawn live in fine lines, silhouettes, soft glows and small pixel art,
-coloured by the theme and palette (`Source/Art/`):
+**DREAM**: a night horizon made of the waveform (hills breathe with the bass) with a faint
+reflection, glints of high detail on the ridge, a slow moon, stars twinkling with hats, clouds that
+thicken with pads. Rarely, one small pixel-art moment appears (two on a bench, a little aeroplane, a
+rain cloud, one lit window, a lantern boat, a night train, a lighthouse, geese, a comet...), drawn from
+a shuffled list so nothing repeats until all have appeared. One at a time, with long gaps.
 
-| Category | Count | Examples |
-|---|---|---|
-| Ancient & mysterious | 25 | Viking longship on a waveform sea, runestone, rune circle, pyramid and eye, torii, pagoda, ruins, Wedjat eye, ankh, scarab, ouroboros, valknut, triple spiral, labyrinth, alchemical signs |
-| Nature & weather | 21 | whale, koi, jellyfish, birds, geese, ravens, rain cloud, storm, cirrus, snowy peaks, fog, pines, moon on the sea, cherry blossom, bamboo, fireflies, aurora, lotus, lone tree |
-| Celestial | 18 | moons and phases, ringed planet, orrery, eclipse, comet, meteors, Orion / Plough / Cassiopeia / Northern Cross, galaxy, nebula, astrolabe, star chart, black hole |
-| Sentimental | 19 | two on a bench, umbrella, little aeroplane, kite, beach walk, lighthouse, one lit window, night train, station, stargazer, rooftop cat, rain on a window, lantern boat, swing, telescope, a secret musician |
-| Surreal | 17 | floating island, door in the sea, eye in the geometry, sky lanterns, endless stairs, moon on a string, hand from the sea, hourglass, portal, many eyes, number transmission, face in the static |
-| Geometric | 16 | seed / flower of life, Metatron's cube, vesica, hexagram, icosahedron, torus, Lissajous, spirograph, golden spiral, ripples, tesseract, sunflower spiral, impossible triangle, standing waves |
+**SIGNAL**: the premium scope. The live, zero-crossing-triggered trace (bass weight, kick pulse); its
+recent history as ribbons of light (a waveform tunnel receding to a vanishing point in BOX, a rising
+ribbon in STRIP); snares split the trace into two fine coloured echoes; a restrained spectrum floor.
 
-Three pairs of elements share a drawing routine but are different pictures: the four constellations
-(different star patterns) and the three sacred-geometry circle figures.
-
-**Scheduler.** A shuffle bag guarantees every element appears once before any can return, and the
-last 14 shown never start a new cycle. From the front of the bag, candidates are scored against a
-slow musical profile (quiet / bass / melodic / energetic), so quiet passages bring sentimental
-scenes and landscapes, bass-heavy passages bring weighty symbols, energetic passages bring geometry
-and drama. At most one main element plus one or two small companions (birds, planes, comets,
-constellations, lanterns) are shown at once. Durations range from ~8 s to ~30 s, with breathing room
-between pieces (longer in breakdowns). Drops end the current piece early and bring in something
-more dramatic. Placement, scale, mirroring, drift and entrance (fade, wipe, iris, rise) vary each time.
-
-**DISPLAY.** SCOPE+ART draws the artwork behind the oscilloscope; ART hides the scope and the
-spectrum completely (fading out smoothly) and gives the artwork the whole screen; SCOPE turns the
-artwork off.
-
-## Visual modes
-
-- **Classic** - zero-crossing triggered horizontal oscilloscope with layered trails.
-- **Orbit** - the waveform wrapped around a circle that breathes, deforms and rotates; echoes expand outwards.
-- **Mirror** - a phase-space portrait of the signal (sample vs. delayed sample) mirrored into a kaleidoscope.
-- **None** - the oscilloscope is hidden and the spectrum fills the screen.
+**ALIGNMENT**: rare moments where everything settles into one formation built from a snapshot of the
+waveform: a mandala, a rune structure, a geometric eye or interlocking circles. They rise (1.4 s), hold
+(2.8 s) and dissolve (2.4 s). They are only a chance on a drop, a kick at the top of a build-up, a calm
+after activity or a 16-bar phrase. There is a 45 s cooldown and nothing in the first 20 s.
 
 ## How it listens
 
-| Musical feature | Detected from | Visual response |
+| Music | Detected from | Response |
 |---|---|---|
-| Kick drums | low-band spectral flux onsets | controlled pulse / expansion, soft bloom |
-| Basslines | bass level (absolute + relative to its own recent peak) | line weight, Orbit radius and deformation |
-| Pads / sustained sound | loud but few onsets | longer trails, slower, more fluid motion |
-| Hi-hats / percussion | 7-16 kHz flux onsets + relative highs | delicate fast detail line / ring |
-| Mids | mid-band level | Orbit / Mirror rotation speed |
-| Drops | sudden rise of energy above its slow average | line splits into several luminous lines; Orbit gains 3-fold symmetry; Mirror grows to 6-fold |
-| Breakdowns | energy falling away from a louder section | thinner, calmer, simpler display |
+| Kick | low-band spectral-flux onsets, adaptive threshold | pulse, weight, core flash |
+| Bass | absolute + relative bass level | ring size, horizon height, line weight |
+| Snare | mid-band onsets | brief spokes / echo split |
+| Pads, sustained sound | loud with few onsets | slow unfolding, lazier waveform, clouds |
+| Hi-hats, highs | 7-16 kHz flux + relative highs | fine veins, dust, star twinkle, glints |
+| Quiet passages | silence / breakdown / loudness | stillness, dimming, breathing |
+| Build-ups | intensity climbing above its 20 s average | faster rotation, brighter frame, extra polygon |
+| Drops | sudden energy rise | bloom, alignment chance |
 
-Sensitivity is adaptive: each band is compared with its own recent maximum, so quiet mixes still move
-the visuals and loud mixes don't saturate them.
+Tempo: Live's song position is used only while the transport plays. When it is stopped there is no
+invented beat grid; the visuals follow detected onsets and envelopes instead.
 
-**Beat Colour** reads Ableton's tempo, time signature and song position. It pulses gently on each
-beat (a little more on the downbeat and in loud passages, less in breakdowns) and crossfades to the
-next palette over 1, 2 or 4 bars depending on the energy. When the transport is stopped it keeps
-time from the host BPM.
+## Performance (2.0 diagnosis and fixes)
+
+Diagnosed from the 1.x code (by inspection, not a profiler):
+
+1. **Full-window repaint every vblank**: the chassis, wordmark and all controls were redrawn 60x/s.
+   Fixed: only the screen rectangle repaints per frame; chrome repaints only on change.
+2. **Transparency layers per art element and for scope fades**: very expensive in Direct2D.
+   Fixed: removed; one small clipped layer only for the single DREAM moment.
+3. **Path clip regions** (rounded screen clip, waveform "reveal" region, drawing the art twice).
+   Fixed: rectangle clip only; rounded corners are painted over with a cached mask.
+4. **Multi-pass glow** (up to dozens of wide strokes in Mirror). Fixed: core + at most 2 halo passes.
+5. **Per-frame allocations** (Path copies for trails, vectors resized). Fixed: reused member Paths
+   and fixed-size arrays; scratch buffers allocated once.
+6. **Grain texture + full-screen vignette gradient every frame**. Fixed: grain removed, vignette
+   rendered once per size into an image.
+7. **Adaptive quality**: the engine's drawing time is measured. Above ~7 ms the quality steps down
+   (2 to 1 to 0: fewer points, fewer halo passes, fewer layers). It steps back up after 5 s of easy frames.
+
+The audio thread only copies samples into a lock-free FIFO and stores transport values in atomics.
+
+## Manual checks in Ableton Live 11 (not yet done; please verify)
+
+- [ ] Plugin loads as "SMSW TOTEM" and an old Live Set with TOKEN/TOTEM on a track still opens it
+- [ ] Audio passes through unchanged (null test against a bypassed copy)
+- [ ] Smooth motion in BOX at full screen and in STRIP with a busy track (no stutter when resizing)
+- [ ] SCENE switches cross-fade smoothly; COLOUR palettes and PULSE change with the music
+- [ ] Transport stopped: status shows FREE and nothing jumps on a fake beat
+- [ ] Transport playing: BPM shown, SACRED steps on beats, symmetry changes every 8 bars
+- [ ] LOCK holds the composition while kicks / bass still move it
+- [ ] ALIGNMENT appears rarely (drop / build); ALIGN off stops it completely
+- [ ] STRIP at 140-180 px height uses the two-column panel; nothing clipped or stretched
+- [ ] CLEAN hides all controls; double-click toggles; settings saved with the Live Set
+- [ ] CPU in Live's meter stays low with the editor closed (analysis runs only while it is open)
 
 ## Build (GitHub, nothing to install)
 
-Upload the contents of this folder to a GitHub repository. The workflow in `.github/workflows`
-builds it on GitHub's Windows machines; download **SMSW-TOTEM-vst3** from the Actions run.
-
-Local build (needs VS 2022 Build Tools + CMake): `.\build.ps1`, then `.\install.ps1` as Administrator
-(it also removes the old `TOKEN.vst3`, since both share one plugin ID).
+The workflow in `.github/workflows` builds on GitHub's Windows machines. Download the artifact
+from the Actions run (it contains `SMSW TOTEM.vst3`) and copy it to
+`C:\Program Files\Common Files\VST3` (remove any old `TOKEN.vst3`, same plugin ID).
 
 ## Architecture
 
 ```
 Source/
-  PluginProcessor   pass-through audio, lock-free sample FIFO, host tempo/transport atomics, state
-  ScopeBuffers.h    audio -> UI FIFO and UI-side sample history
-  AudioAnalyser     FFT bands (absolute + adaptive), kick / snare / hat onsets, intensity, drops, breakdowns
-  ColourEngine      MANUAL palette or BEAT COLOUR (tempo-synced palette evolution + beat pulse)
-  Theme             DARK / LIGHT interface looks and the artwork palettes
-  Visualiser        Classic / Orbit / Mirror / None + spectrum
-  UI/               slider look, pill selectors and toggles
-  PluginEditor      Strip / Large / Clean layouts, wordmark, frame loop (vblank-synced, message thread)
+  PluginProcessor     pass-through audio, lock-free sample FIFO, host transport atomics, state
+  ScopeBuffers.h      audio -> UI FIFO and UI-side sample history
+  AudioAnalyser       FFT bands (absolute + adaptive), kick / snare / hat onsets, build, drop, breakdown
+  ColourEngine        studio palettes / PULSE, host beat clock (only when Live plays)
+  Engine/
+    SignalFrame.h     the per-frame musical snapshot + lean drawing helpers
+    TotemEngine       waveform extraction (triggered, low / fine / slow), clocks, world cross-fade
+    SacredWorld       symmetry, petals, runes
+    DreamWorld        waveform horizon + rare pixel moments (uses Art/ library)
+    SignalWorld       trace, ribbons, tunnel, spectrum floor
+    Alignment         rare formations with cooldown
+  Art/                pixel-art / line-art library (DREAM uses a sentimental subset)
+  UI/                 slider look, pill selectors and toggles
+  PluginEditor        layouts, partial repaint, cached vignette, adaptive quality, HUD
 ```

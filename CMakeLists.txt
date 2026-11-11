@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(TOTEM VERSION 2.0.0 LANGUAGES C CXX)
 
@@ -53,7 +53,11 @@ target_sources(TOKEN PRIVATE
     Source/AudioAnalyser.cpp
     Source/Theme.cpp
     Source/ColourEngine.cpp
-    Source/Visualiser.cpp
+    Source/Engine/SacredWorld.cpp
+    Source/Engine/DreamWorld.cpp
+    Source/Engine/SignalWorld.cpp
+    Source/Engine/Alignment.cpp
+    Source/Engine/TotemEngine.cpp
     Source/UI/TotemLookAndFeel.cpp
     Source/UI/Controls.cpp
     Source/Art/ArtKit.cpp
@@ -63,8 +67,7 @@ target_sources(TOKEN PRIVATE
     Source/Art/ArtSentimental.cpp
     Source/Art/ArtSurreal.cpp
     Source/Art/ArtGeometric.cpp
-    Source/Art/ArtMandala.cpp
-    Source/Art/ArtEngine.cpp)
+    Source/Art/ArtMandala.cpp)
 
 target_include_directories(TOKEN PRIVATE Source)
 
