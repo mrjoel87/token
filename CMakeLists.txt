@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(TOTEM VERSION 2.0.0 LANGUAGES C CXX)
+project(TOTEM VERSION 2.1.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -29,14 +29,14 @@ endif()
 # IMPORTANT - plugin identity:
 #   PLUGIN_MANUFACTURER_CODE (Smsw) and PLUGIN_CODE (Tokn) define the VST3 class ID that Ableton
 #   uses to find the plugin in saved Live Sets. They are deliberately unchanged from TOKEN so
-#   existing projects keep working. Only the visible name changed to "SMSW TOTEM".
+#   existing projects keep working. The visible name is now "SMSW TOTEM 2".
 #   The CMake target is also still called TOKEN (internal only) so existing GitHub workflows keep working.
 juce_add_plugin(TOKEN
     COMPANY_NAME "SMSW"
     PLUGIN_MANUFACTURER_CODE Smsw
     PLUGIN_CODE Tokn
     FORMATS VST3
-    PRODUCT_NAME "SMSW TOTEM"
+    PRODUCT_NAME "SMSW TOTEM 2"
     DESCRIPTION "Audio-reactive visualiser"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
@@ -53,21 +53,12 @@ target_sources(TOKEN PRIVATE
     Source/AudioAnalyser.cpp
     Source/Theme.cpp
     Source/ColourEngine.cpp
-    Source/Engine/SacredWorld.cpp
-    Source/Engine/DreamWorld.cpp
-    Source/Engine/SignalWorld.cpp
-    Source/Engine/Alignment.cpp
+    Source/Engine/ScopePen.cpp
+    Source/Engine/Glyphs.cpp
+    Source/Engine/Transmissions.cpp
     Source/Engine/TotemEngine.cpp
     Source/UI/TotemLookAndFeel.cpp
-    Source/UI/Controls.cpp
-    Source/Art/ArtKit.cpp
-    Source/Art/ArtAncient.cpp
-    Source/Art/ArtNature.cpp
-    Source/Art/ArtCelestial.cpp
-    Source/Art/ArtSentimental.cpp
-    Source/Art/ArtSurreal.cpp
-    Source/Art/ArtGeometric.cpp
-    Source/Art/ArtMandala.cpp)
+    Source/UI/Controls.cpp)
 
 target_include_directories(TOKEN PRIVATE Source)
 
