@@ -27,6 +27,7 @@ struct SignalFrame
     // musical features, already scaled by REACT where they drive motion
     float bass = 0.0f, kick = 0.0f, snare = 0.0f, hat = 0.0f, high = 0.0f, mid = 0.0f;
     float sustain = 0.0f, quiet = 0.0f, energy = 0.0f, build = 0.0f, drop = 0.0f, breakdown = 0.0f;
+    float volume = 0.0f;     // smoothed loudness 0..1 (breathing)
     bool kickHit = false, snareHit = false, dropHit = false;
 
     float evo = 0.0f;        // evolution clock: SPEED-scaled, frozen by LOCK
@@ -37,7 +38,7 @@ struct SignalFrame
     double beatsPerBar = 4.0;
 
     float speed = 1.0f, react = 0.65f;
-    bool locked = false, strip = false;
+    bool locked = false, strip = false, light = false;
     int quality = 2;         // 2 = full, 1 = reduced, 0 = minimal (adaptive)
     float time = 0.0f, dt = 1.0f / 60.0f;
 
