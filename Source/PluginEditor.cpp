@@ -13,52 +13,31 @@ namespace
         return p == nullptr ? 0 : juce::jlimit (0, maxIndex, juce::roundToInt (p->load()));
     }
 
-    const char* sceneName (int i)
-    {
-        switch (i)
-        {
-            case 0:  return "SACRED";
-            case 1:  return "DREAM";
-            default: return "SIGNAL";
-        }
-    }
-
-    const char* paletteName (int i)
-    {
-        switch (i)
-        {
-            case 0:  return "ABYSS";
-            case 1:  return "ULTRAVIOLET";
-            case 2:  return "AMBER";
-            case 3:  return "IVORY";
-            default: return "PULSE";
-        }
-    }
-
     constexpr float screenCorner = 10.0f;
+    const juce::Colour darkScreen { 0xff030407 };
+    const juce::Colour lightScreen { 0xfff4f0e7 };
 }
 
 // =================================================================================================
 TokenEditor::TokenEditor (TokenAudioProcessor& p)
     : AudioProcessorEditor (&p),
       proc (p),
-      sceneSelector  (*p.apvts.getParameter (ids::world),   { "SACRED", "DREAM", "SIGNAL" }),
-      colourSelector (*p.apvts.getParameter (ids::palette), { "ABYSS", "UV", "AMBER", "IVORY", "PULSE" }),
+      colourSelector (*p.apvts.getParameter (ids::palette), { "ABYSS", "UV", "ACID", "BLOOD", "GOLD", "PULSE" }),
+      themeSelector  (*p.apvts.getParameter (ids::theme),   { "DARK", "LIGHT" }),
       layoutSelector (*p.apvts.getParameter (ids::mode),    { "STRIP", "BOX" }),
-      lockToggle     (*p.apvts.getParameter (ids::lock),      "LOCK"),
-      alignToggle    (*p.apvts.getParameter (ids::alignment), "ALIGN"),
-      cleanToggle    (*p.apvts.getParameter (ids::clean),     "CLEAN")
+      lockToggle     (*p.apvts.getParameter (ids::lock),    "LOCK"),
+      cleanToggle    (*p.apvts.getParameter (ids::clean),   "CLEAN")
 {
     pMode    = p.apvts.getRawParameterValue (ids::mode);
     pClean   = p.apvts.getRawParameterValue (ids::clean);
-    pWorld   = p.apvts.getRawParameterValue (ids::world);
+    pTheme   = p.apvts.getRawParameterValue (ids::theme);
     pPalette = p.apvts.getRawParameterValue (ids::palette);
     pReact   = p.apvts.getRawParameterValue (ids::react);
     pSpeed   = p.apvts.getRawParameterValue (ids::speed);
     pLock    = p.apvts.getRawParameterValue (ids::lock);
-    pAlign   = p.apvts.getRawParameterValue (ids::alignment);
 
-    look::setActive (false);   // TOTEM 2.0 is a dark instrument
+    lightTheme = isOn (pTheme);
+    look::setActive (lightTheme);
     setLookAndFeel (&lookAndFeel);
     setOpaque (true);
 
@@ -73,8 +52,8 @@ TokenEditor::TokenEditor (TokenAudioProcessor& p)
     reactSlider.setDoubleClickReturnValue (true, defaults::react);
     speedSlider.setDoubleClickReturnValue (true, defaults::speed);
 
-    for (auto* c : std::initializer_list<juce::Component*> { &sceneSelector, &colourSelector, &layoutSelector, &lockToggle,
-                                                             &alignToggle, &cleanToggle, &reactSlider, &speedSlider })
+    for (auto* c : std::initializer_list<juce::Component*> { &colourSelector, &themeSelector, &layoutSelector, &lockToggle,
+                                                             &cleanToggle, &reactSlider, &speedSlider })
         addAndMakeVisible (c);
 
     pullLeft.resize ((size_t) ScopeFifo::capacity);
@@ -107,9 +86,9 @@ void TokenEditor::applyMode (DisplayMode newMode, bool force)
     applyingMode = true;
 
     if (mode == DisplayMode::Strip)
-        setResizeLimits (600, 140, 3200, 600);
+        setResizeLimits (600, 140, 3840, 700);
     else
-        setResizeLimits (640, 420, 3200, 2200);
+        setResizeLimits (640, 420, 3840, 2400);
 
     const int w = mode == DisplayMode::Strip ? proc.stripW.load() : proc.boxW.load();
     const int h = mode == DisplayMode::Strip ? proc.stripH.load() : proc.boxH.load();
@@ -123,8 +102,8 @@ void TokenEditor::applyMode (DisplayMode newMode, bool force)
 
 void TokenEditor::updateVisibility()
 {
-    for (auto* c : std::initializer_list<juce::Component*> { &sceneSelector, &colourSelector, &layoutSelector, &lockToggle,
-                                                             &alignToggle, &reactSlider, &speedSlider })
+    for (auto* c : std::initializer_list<juce::Component*> { &colourSelector, &themeSelector, &layoutSelector, &lockToggle,
+                                                             &reactSlider, &speedSlider })
         c->setVisible (! clean);
 
     cleanToggle.setVisible (true);
@@ -195,11 +174,10 @@ void TokenEditor::layoutBox()
     auto row1 = inner.removeFromTop (inner.getHeight() * 0.5f);
     auto row2 = inner;
 
-    placeRow (row1, { { &sceneSelector, "SCENE" }, { &colourSelector, "COLOUR" }, { &layoutSelector, "LAYOUT" } },
-              { 3.4f, 4.6f, 2.0f }, true);
-    placeRow (row2, { { &reactSlider, "REACT" }, { &speedSlider, "SPEED" }, { &lockToggle, "HOLD" },
-                      { &alignToggle, "MOMENTS" }, { &cleanToggle, "VIEW" } },
-              { 3.0f, 3.0f, 1.2f, 1.2f, 1.2f }, true);
+    placeRow (row1, { { &colourSelector, "COLOUR" }, { &themeSelector, "THEME" }, { &layoutSelector, "LAYOUT" } },
+              { 5.6f, 2.2f, 2.2f }, true);
+    placeRow (row2, { { &reactSlider, "REACT" }, { &speedSlider, "SPEED" }, { &lockToggle, "HOLD" }, { &cleanToggle, "VIEW" } },
+              { 3.4f, 3.4f, 1.3f, 1.3f }, true);
 }
 
 void TokenEditor::layoutStrip()
@@ -210,8 +188,8 @@ void TokenEditor::layoutStrip()
     // a real strip layout: the screen keeps the full height, controls sit in a side panel that
     // switches to two columns when the window is shallow - nothing is cropped or stretched
     const bool twoColumns = b.getHeight() < 180.0f;
-    const float panelW = twoColumns ? juce::jlimit (330.0f, 460.0f, b.getWidth() * 0.4f)
-                                    : juce::jlimit (220.0f, 310.0f, b.getWidth() * 0.27f);
+    const float panelW = twoColumns ? juce::jlimit (360.0f, 480.0f, b.getWidth() * 0.42f)
+                                    : juce::jlimit (240.0f, 320.0f, b.getWidth() * 0.28f);
     barRect = b.removeFromRight (panelW);
     screenRect = b.reduced (m).withTrimmedRight (-4.0f);
 
@@ -242,26 +220,24 @@ void TokenEditor::layoutStrip()
 
     if (twoColumns)
     {
-        auto left = inner.removeFromLeft (inner.getWidth() * 0.5f - 4.0f);
+        auto left = inner.removeFromLeft (inner.getWidth() * 0.56f - 4.0f);
         inner.removeFromLeft (8.0f);
         const auto a = layoutColumn (left, 3);
         const auto c = layoutColumn (inner, 3);
-        sceneSelector.setBounds (a[0].toNearestInt());
-        colourSelector.setBounds (a[1].toNearestInt());
-        placeRow (a[2], { { &layoutSelector, nullptr }, { &cleanToggle, nullptr } }, { 1.6f, 1.0f }, false);
+        colourSelector.setBounds (a[0].toNearestInt());
+        placeRow (a[1], { { &themeSelector, nullptr }, { &layoutSelector, nullptr } }, { 1.0f, 1.0f }, false);
+        placeRow (a[2], { { &lockToggle, nullptr }, { &cleanToggle, nullptr } }, { 1.0f, 1.0f }, false);
         placeRow (c[0], { { &reactSlider, "REACT" } }, { 1.0f }, false);
         placeRow (c[1], { { &speedSlider, "SPEED" } }, { 1.0f }, false);
-        placeRow (c[2], { { &lockToggle, nullptr }, { &alignToggle, nullptr } }, { 1.0f, 1.0f }, false);
     }
     else
     {
         const auto r = layoutColumn (inner, 5);
-        sceneSelector.setBounds (r[0].toNearestInt());
-        colourSelector.setBounds (r[1].toNearestInt());
+        colourSelector.setBounds (r[0].toNearestInt());
+        placeRow (r[1], { { &themeSelector, nullptr }, { &layoutSelector, nullptr } }, { 1.0f, 1.0f }, false);
         placeRow (r[2], { { &reactSlider, "REACT" } }, { 1.0f }, false);
         placeRow (r[3], { { &speedSlider, "SPEED" } }, { 1.0f }, false);
-        placeRow (r[4], { { &layoutSelector, nullptr }, { &lockToggle, nullptr }, { &alignToggle, nullptr }, { &cleanToggle, nullptr } },
-                  { 1.5f, 1.0f, 1.0f, 1.0f }, false);
+        placeRow (r[4], { { &lockToggle, nullptr }, { &cleanToggle, nullptr } }, { 1.0f, 1.0f }, false);
     }
 }
 
@@ -293,7 +269,7 @@ void TokenEditor::rebuildScreenCache()
     screenCorners.addRectangle (s);
     screenCorners.addRoundedRectangle (s, corner);
 
-    // vignette: rendered once per size instead of a full-screen gradient every frame
+    // vignette (dark theme): rendered once per size instead of a full-screen gradient every frame
     const int w = juce::jmax (1, (int) s.getWidth()), h = juce::jmax (1, (int) s.getHeight());
     vignette = juce::Image (juce::Image::ARGB, w, h, true);
     {
@@ -369,7 +345,9 @@ void TokenEditor::frame()
     lastTime = now;
     time = (float) (now - startTime);
 
-    // layout-changing parameters (may come from host automation)
+    // layout / theme parameters (may come from host automation)
+    bool chromeDirty = false;
+
     const bool newClean = isOn (pClean);
     if (newClean != clean)
     {
@@ -382,6 +360,14 @@ void TokenEditor::frame()
     if (newMode != mode)
         applyMode (newMode, false);
 
+    const bool newLight = isOn (pTheme);
+    if (newLight != lightTheme)
+    {
+        lightTheme = newLight;
+        look::setActive (lightTheme);
+        chromeDirty = true;
+    }
+
     // audio from the processor (lock-free FIFO; the audio thread only copies samples)
     const int n = proc.scopeFifo.pull (pullLeft.data(), pullRight.data(), (int) pullLeft.size());
     if (n > 0)
@@ -392,34 +378,39 @@ void TokenEditor::frame()
     const auto& f = analyser.features();
 
     transport = readTransport (now);
-    const int paletteIndex = choiceOf (pPalette, 4);
+    const int paletteIndex = choiceOf (pPalette, numPaletteChoices - 1);
     colours.update (dt, f, transport, paletteIndex);
 
-    settings.world = (World) choiceOf (pWorld, 2);
     settings.speed = speedFactor (pSpeed->load());
     settings.react = pReact->load();
     settings.locked = isOn (pLock);
-    settings.alignment = isOn (pAlign);
     settings.strip = mode == DisplayMode::Strip;
+    settings.light = lightTheme;
     settings.quality = quality;
     totem.update (history, f, colours, settings, visualArea(), sr, dt, time);
 
     hasFrame = true;
 
     // the controls' accent follows the palette; repaint them only when it actually changes
-    const auto accent = paletteIndex < look::numStudioPalettes ? look::studioPalette (paletteIndex).a
-                                                               : look::studioPalette (juce::jlimit (0, look::numStudioPalettes - 1,
-                                                                                                    (int) std::fmod (std::abs (colours.beats()) / 8.0, 4.0))).a;
+    auto accent = paletteIndex < look::numStudioPalettes
+                      ? look::studioPalette (paletteIndex).a
+                      : look::studioPalette (juce::jlimit (0, look::numStudioPalettes - 1,
+                                                           (int) std::fmod (std::abs (colours.beats()) / 8.0, (double) look::numStudioPalettes))).a;
+    if (lightTheme)
+        accent = look::studioPalette (paletteIndex < look::numStudioPalettes ? paletteIndex : 0).b.darker (0.3f);
+
     if (paletteIndex != lastPalette || accent != lastAccent)
     {
         lastPalette = paletteIndex;
         lastAccent = accent;
         look::setAccent (accent);
-        repaint();
-        return;
+        chromeDirty = true;
     }
 
-    repaint (screenRect.toNearestInt().expanded (1));
+    if (chromeDirty)
+        repaint();
+    else
+        repaint (screenRect.toNearestInt().expanded (1));
 }
 
 // =================================================================================================
@@ -427,7 +418,7 @@ void TokenEditor::frame()
 // =================================================================================================
 void TokenEditor::paint (juce::Graphics& g)
 {
-    look::setActive (false);
+    look::setActive (lightTheme);
     const auto& lk = look::active();
 
     const auto clip = g.getClipBounds().toFloat();
@@ -469,7 +460,7 @@ void TokenEditor::paintScreen (juce::Graphics& g, const look::Look& lk)
         juce::Graphics::ScopedSaveState state (g);
         g.reduceClipRegion (s.toNearestInt());   // rectangle clip only: cheap on every renderer
 
-        g.setColour (juce::Colour (0xff030407));
+        g.setColour (lightTheme ? lightScreen : darkScreen);
         g.fillRect (s);
 
         if (hasFrame)
@@ -479,11 +470,8 @@ void TokenEditor::paintScreen (juce::Graphics& g, const look::Look& lk)
             adaptQuality (juce::Time::getMillisecondCounterHiRes() - t0);
         }
 
-        if (quality >= 1 && vignette.isValid())
+        if (! lightTheme && quality >= 1 && vignette.isValid())
             g.drawImageAt (vignette, (int) s.getX(), (int) s.getY());
-
-        g.setColour (juce::Colours::white.withAlpha (0.04f));
-        g.fillRect (s.getX() + corner, s.getY() + 1.0f, s.getWidth() - corner * 2.0f, 1.0f);
 
         paintHud (g, lk);
     }
@@ -500,18 +488,21 @@ void TokenEditor::paintHud (juce::Graphics& g, const look::Look& lk)
 
     if (clean)
     {
-        // discreet signature for screen recordings
-        auto r = s.withTop (s.getBottom() - 12.0f);
+        // discreet signature for screen recordings and projection
+        auto r = s.withTop (s.getBottom() - 12.0f).withTrimmedRight (96.0f);
         g.setFont (ui::font (9.0f, "SemiBold", 0.45f));
-        g.setColour (lk.textDim.withAlpha (0.45f));
-        g.drawText ("SMSW  TOTEM", r, juce::Justification::centredRight, false);
+        g.setColour (lk.textDim.withAlpha (0.4f));
+        g.drawText ("SMSW  TOTEM 2", r, juce::Justification::centredLeft, false);
         return;
     }
 
     auto r = s.removeFromTop (12.0f);
     g.setFont (ui::font (8.5f, "SemiBold", 0.3f));
 
-    juce::String status = juce::String (sceneName (choiceOf (pWorld, 2))) + "   /   " + paletteName (choiceOf (pPalette, 4));
+    // left: the image that is on screen, and its number in the library
+    juce::String status = juce::String (totem.currentName())
+                        + "   /   " + juce::String (totem.currentNumber()).paddedLeft ('0', 2)
+                        + " OF " + juce::String (totem.librarySize());
     if (isOn (pLock))
         status += "   /   HELD";
     g.setColour (lk.textDim.withAlpha (0.75f));
@@ -523,17 +514,11 @@ void TokenEditor::paintHud (juce::Graphics& g, const look::Look& lk)
     auto right = r;
     const auto dot = right.removeFromRight (8.0f).withSizeKeepingCentre (5.0f, 5.0f);
     const float pulse = synced ? colours.pulse() : analyser.features().kick;
-    g.setColour (colours.palette().a.withAlpha (0.3f + 0.7f * juce::jlimit (0.0f, 1.0f, pulse * 2.0f)));
+    g.setColour (look::accent().withAlpha (0.3f + 0.7f * juce::jlimit (0.0f, 1.0f, pulse * 2.0f)));
     g.fillEllipse (dot);
     right.removeFromRight (6.0f);
     g.setColour (lk.textDim.withAlpha (0.75f));
     g.drawText (tempo, right, juce::Justification::centredRight, false);
-
-    if (totem.alignmentLevel() > 0.02f)
-    {
-        g.setColour (colours.palette().c.withAlpha (0.8f * totem.alignmentLevel()));
-        g.drawText ("ALIGNMENT", r, juce::Justification::centred, false);
-    }
 }
 
 void TokenEditor::paintWordmark (juce::Graphics& g, const look::Look& lk, juce::Rectangle<float> r, bool compact)
@@ -546,10 +531,10 @@ void TokenEditor::paintWordmark (juce::Graphics& g, const look::Look& lk, juce::
         const float h = juce::jlimit (14.0f, 20.0f, r.getHeight() * 0.75f);
         g.setFont (ui::font (h, "Light", 0.42f));
         g.setColour (lk.text);
-        g.drawText ("TOTEM", r, juce::Justification::centredLeft, false);
+        g.drawText ("TOTEM 2", r, juce::Justification::centredLeft, false);
         g.setFont (ui::font (8.5f, "SemiBold", 0.4f));
         g.setColour (lk.textDim);
-        g.drawText ("SMSW  2.0", r, juce::Justification::centredRight, false);
+        g.drawText ("SMSW", r, juce::Justification::centredRight, false);
         return;
     }
 
@@ -561,7 +546,7 @@ void TokenEditor::paintWordmark (juce::Graphics& g, const look::Look& lk, juce::
 
     g.setFont (ui::font (h, "Light", 0.42f));
     g.setColour (lk.text);
-    g.drawText ("TOTEM", r, juce::Justification::centredLeft, false);
+    g.drawText ("TOTEM 2", r, juce::Justification::centredLeft, false);
 
     // a short accent hairline under the wordmark
     g.setColour (look::accent().withAlpha (0.8f));

@@ -14,12 +14,12 @@
 namespace token
 {
 /**
-    SMSW TOTEM 2.0 editor.
+    SMSW TOTEM 2 editor.
 
-    Performance rules (see README "Performance"):
+    Performance rules:
       - every vblank only the screen rectangle is repainted; the chassis and controls repaint only
         when something about them changes
-      - no Path clip regions, no per-element transparency layers, cached vignette image
+      - no Path clip regions, no transparency layers, cached vignette image
       - the engine's drawing time is measured and the quality level (2 / 1 / 0) adapts to it
 */
 class TokenEditor final : public juce::AudioProcessorEditor
@@ -64,22 +64,21 @@ private:
     TokenAudioProcessor& proc;
     TotemLookAndFeel lookAndFeel;
 
-    SegmentSelector sceneSelector, colourSelector, layoutSelector;
-    LedToggle lockToggle, alignToggle, cleanToggle;
+    SegmentSelector colourSelector, themeSelector, layoutSelector;
+    LedToggle lockToggle, cleanToggle;
     juce::Slider reactSlider, speedSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> reactAttachment, speedAttachment;
 
     std::atomic<float>* pMode = nullptr;
     std::atomic<float>* pClean = nullptr;
-    std::atomic<float>* pWorld = nullptr;
+    std::atomic<float>* pTheme = nullptr;
     std::atomic<float>* pPalette = nullptr;
     std::atomic<float>* pReact = nullptr;
     std::atomic<float>* pSpeed = nullptr;
     std::atomic<float>* pLock = nullptr;
-    std::atomic<float>* pAlign = nullptr;
 
     DisplayMode mode = DisplayMode::Box;
-    bool clean = false, applyingMode = false, hasFrame = false;
+    bool clean = false, lightTheme = false, applyingMode = false, hasFrame = false;
 
     juce::Rectangle<float> screenRect, brandRect, barRect;
     std::vector<Caption> captions;
@@ -95,7 +94,7 @@ private:
     Transport transport;
     float time = 0.0f;
 
-    int quality = 2, lastPalette = -1;
+    int quality = 2, lastPalette = -1, lastNumber = -1;
     double paintAvgMs = 0.0, goodTime = 0.0;
     juce::Colour lastAccent;
 

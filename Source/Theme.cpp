@@ -69,8 +69,9 @@ const Palette& studioPalette (int index)
     static const std::array<Palette, numStudioPalettes> set {{
         { C (0xff9ff2ff), C (0xff2f5bff), C (0xffffb35c) },   // ABYSS: cyan, electric blue, amber
         { C (0xffd4c4ff), C (0xff7a3cff), C (0xff46eeff) },   // ULTRAVIOLET: lilac, ultraviolet, cyan
-        { C (0xffffd9a0), C (0xffff8a2a), C (0xff9ff2ff) },   // AMBER: warm light, amber, ice
-        { C (0xfff6f2ea), C (0xff8d98b5), C (0xffffb35c) },   // IVORY: soft white, steel, amber
+        { C (0xffd8ff5a), C (0xff19e3a2), C (0xffff47e3) },   // ACID: lime, toxic green, magenta
+        { C (0xffff6b6b), C (0xffb3122e), C (0xffffd38a) },   // BLOOD: red light, deep crimson, pale gold
+        { C (0xffffe2a8), C (0xffff9a2e), C (0xff9ff2ff) },   // GOLD: warm light, amber, ice
     }};
     return set[(size_t) juce::jlimit (0, numStudioPalettes - 1, index)];
 }
